@@ -26,3 +26,14 @@ x = torch.randn((64, 256, 128), device=device, dtype=dtype)
 output = model(x)
 
 print(output.shape)  # Expected: [64, 256, 128]
+
+
+
+"""This example creates a LongNet model with four dilated attention layers. 
+Each layer operates on a different dilation rate and has the same segment size. 
+The dummy data is 256 steps long and the output should be of the same length (i.e., [batch_size, seq_len, d_model]). 
+This example does not include any form of training, but you can add a loss function and optimizer as needed."""
+
+
+
+
