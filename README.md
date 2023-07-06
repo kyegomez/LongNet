@@ -57,7 +57,7 @@ Once you have installed LongNet, you can use the `DilatedAttention` class as fol
 ```python
 import torch
 import torch.nn as nn
-from LongNet.attention import DilatedAttention
+from LongNet import DilatedAttention
 
 # Replace this with your correct GPU device
 device = "cuda:0"
