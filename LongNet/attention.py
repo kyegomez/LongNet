@@ -8,13 +8,14 @@ device = "cuda:0"
 dtype=torch.float16
 
 class DilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size):
+    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0):
         super(DilatedAttention, self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
         self.dilation_rate = dilation_rate
         self.segment_size = segment_size
         self.attention = FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         batch_size, seq_len, _ = x.shape
@@ -25,6 +26,9 @@ class DilatedAttention(nn.Module):
 
         # Perform attention
         attn_output, _ = self.attention(x, x, x)
+
+        #apply dropout
+        attn_output = self.dropout(attn_output)
 
         # Scatter and concatenate 
         attn_output = attn_output.view(batch_size, -1, self.d_model)
