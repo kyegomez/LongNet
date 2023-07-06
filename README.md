@@ -1,3 +1,10 @@
+# Agora
+This implementation of LongNet is brought to you by Agora, we're an all-new open source AI research organization with 1,500+ AI researchers all striving to advance Humanity!
+
+![Agora banner](agora-banner-water.png)
+
+[Join us and help contribute to LongNet and or recieve support in the Agora discord!](https://discord.gg/qUtxnK2NMf)
+
 # LongNet: Scaling Transformers to 1,000,000,000 Tokens
 
 This is an implementation for the paper [LongNet: Scaling Transformers to 1,000,000,000 Tokens](https://arxiv.org/abs/xxx.xxxxx) by Jiayu Ding, Shuming Ma, Li Dong, Xingxing Zhang, Shaohan Huang, Wenhui Wang, Furu Wei. The LongNet is a Transformer variant designed to scale sequence length up to more than 1 billion tokens without sacrificing performance on shorter sequences.
