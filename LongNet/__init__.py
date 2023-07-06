@@ -1,0 +1,1 @@
+from LongNet.attention import DilatedAttention, LongNet
