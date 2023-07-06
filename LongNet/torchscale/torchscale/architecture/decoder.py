@@ -108,31 +108,20 @@ class DecoderLayer(nn.Module):
         )
 
     def build_self_attention(self, embed_dim, args):
-        # return DilatedAttention(
-        #     args,
-        #     embed_dim,
-        #     args.decoder_attention_heads,
-        #     dropout=args.attention_dropout,
-        #     self_attention=True,
-        #     encoder_decoder_attention=False,
-        #     subln=args.subln,
-        # )
         return DilatedAttention(
             embed_dim,
             args.decoder_attention_heads,
             args.decoder_dilation_rate,
             args.decoder_segment_size,
-        )  # Use DilatedAttention instead of MultiheadAttention
-
+            dropout=args.attention_dropout, #specify dropout
+            )
     def build_encoder_attention(self, embed_dim, args):
-        return MultiheadAttention(
-            args,
+        return DilatedAttention(
             embed_dim,
             args.decoder_attention_heads,
-            dropout=args.attention_dropout,
-            self_attention=False,
-            encoder_decoder_attention=True,
-            subln=args.subln,
+            args.decoder_dilation_rate,
+            args.decoder_segment_size,
+            dropout=args.attention_dropout, #specify dropout
         )
 
     def residual_connection(self, x, residual):

@@ -14,45 +14,105 @@ LongNet has significant advantages:
 
 Experiment results demonstrate that LongNet yields strong performance on both long-sequence modeling and general language tasks. Their work opens up new possibilities for modeling very long sequences, e.g., treating a whole corpus or even the entire Internet as a sequence.
 
+Here's the updated usage and installation section with two methods: git clone or pip install LongNet:
+
 ## Installation
-```
+
+You can install LongNet using one of the following methods:
+
+### Method 1: Git Clone
+
+1. Clone the LongNet repository from GitHub:
+
+```shell
 git clone https://github.com/kyegomez/LongNet.git
+```
+
+2. Navigate to the cloned directory:
+
+```shell
 cd LongNet
+```
+
+3. Install the required dependencies:
+
+```shell
 pip install -r requirements.txt
 ```
-Note: Please ensure you have a compatible Python version installed. This codebase has been tested with Python 3.7.
+
+### Method 2: Pip Install
+
+1. Install LongNet directly from PyPI using pip:
+
+```shell
+pip install LongNet
+```
+
+Please note that LongNet requires a compatible Python version (tested with Python 3.7).
 
 ## Usage
-```python
-import torch 
-from LongNet import LongNet
 
-# Specify the device and dtype
+Once you have installed LongNet, you can use the `DilatedAttention` class as follows:
+
+```python
+import torch
+import torch.nn as nn
+from LongNet.attention import DilatedAttention
+
+# Replace this with your correct GPU device
 device = "cuda:0"
 dtype = torch.float16
 
-# Specify the hyperparameters
-d_model = 128
+# Create an instance of DilatedAttention
+d_model = 512
 num_heads = 8
-dilation_rates = [1, 2, 4, 8]
-segment_sizes = [64, 64, 64, 64]
+dilation_rate = 2
+segment_size = 64
+dropout = 0.2  # Specify the dropout rate
+attention = DilatedAttention(
+    d_model=d_model,
+    num_heads=num_heads,
+    dilation_rate=dilation_rate,
+    segment_size=segment_size,
+    dropout=dropout,
+).to(device, dtype=dtype)
 
-# Create the model
-model = LongNet(
-    d_model=d_model, 
-    num_heads=num_heads, 
-    dilation_rates=dilation_rates, 
-    segment_sizes=segment_sizes
-).to(device)
-
-# Create some dummy data
-x = torch.randn((64, 256, 128), device=device, dtype=dtype)
+# Create some dummy input data
+batch_size = 16
+seq_len = 128
+input_dim = d_model
+inputs = torch.randn(batch_size, seq_len, input_dim, device=device, dtype=dtype)
 
 # Forward pass
-output = model(x)
+outputs = attention(inputs)
 
-print(output.shape)  # Expected: [64, 256, 128]
+# Print the output shape
+print(outputs.shape)  # Expected: [batch_size, seq_len, d_model]
 ```
+
+In the example above, we create an instance of the `DilatedAttention` class with the specified hyperparameters. We then generate some dummy input data and pass it through the attention mechanism to obtain the outputs. Finally, we print the shape of the output tensor.
+
+## DilatedAttention Documentation
+
+The `DilatedAttention` class implements dilated attention, which expands the attentive field exponentially as the distance between tokens grows. It inherits from `torch.nn.Module` and can be used as a drop-in replacement for standard attention mechanisms in Transformer models.
+
+### Parameters
+
+- `d_model` (int): The dimensionality of the input and output embeddings.
+- `num_heads` (int): The number of attention heads.
+- `dilation_rate` (int): The dilation rate for sparsifying the input sequence.
+- `segment_size` (int): The size of each segment after sparsification.
+- `dropout` (float, optional): The dropout probability to apply to the attention output. Default: 0.0 (no dropout).
+
+### Inputs
+
+- `x` (Tensor): The input tensor of shape `(batch_size, seq_len, d_model)`.
+
+### Outputs
+
+- `output` (Tensor): The output tensor of shape `(batch_size, seq_len, d_model)`.
+
+Please note that the input tensor should be on the correct device (e.g., GPU) and have the appropriate data type (`dtype`).
 
 ## Citation
 ```
