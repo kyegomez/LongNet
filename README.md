@@ -138,3 +138,18 @@ Share LongNet with your friends and colleagues who might find it useful. Simply 
 Thank you for sharing!
 
 [Share LongNet Repository](https://github.com/kyegomez/LongNet)
+
+
+
+
+# Roadmap
+
+* Integrate Alibi and xpos for even further ridicoulus length extrapolation
+
+* Create a multi-modality verison with sub layer norm
+
+* Integrate QK Layernorm
+
+* Integrate One write query head maybe
+
+* Recreate in Triton or Jax for ultra mega speed boost
