@@ -19,7 +19,8 @@ setup(
   ],
     install_requires=[
         'torch',
-        'einops'
+        'einops',
+        'flash_attn'
     ],
   classifiers=[
     'Development Status :: 4 - Beta',
