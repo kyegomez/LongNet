@@ -22,7 +22,10 @@ setup(
         'einops',
         'flash-attn',
         'accelerate',
-        'bitsandbytes'
+        'bitsandbytes',
+        'fairscale',
+        'timm',
+        'flamingo-pytorch'
     ],
   classifiers=[
     'Development Status :: 4 - Beta',

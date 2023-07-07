@@ -7,3 +7,4 @@ bitsandbytes
 fairscale
 
 timm
+flamingo-pytorch
