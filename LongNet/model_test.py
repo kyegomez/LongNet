@@ -1,5 +1,5 @@
 import torch
-from LongNet import LongNetTokenizer, LongNetSelector
+from LongNet.model import LongNetTokenizer, LongNetSelector
 #init longnet selector and tokenizer
 #define the data and input text and image
 
