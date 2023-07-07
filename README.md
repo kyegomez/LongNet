@@ -252,17 +252,6 @@ The `DilatedAttention` model achieves efficiency and scalability in several ways
 
 
 
-
-## Citation
-```
-@inproceedings{ding2023longnet,
-  title={LongNet: Scaling Transformers to 1,000,000,000 Tokens},
-  author={Ding, Jiayu and Ma, Shuming and Dong, Li and Zhang, Xingxing and Huang, Shaohan and Wang, Wenhui and Wei, Furu},
-  booktitle={Proceedings of the 10th International Conference on Learning Representations},
-  year={2023}
-}
-```
-
 ## Share with Friends
 Share LongNet with your friends and colleagues who might find it useful. Simply click on the links below to share on various platforms:
 
@@ -292,3 +281,14 @@ Thank you for sharing!
 * Integrate One write query head maybe
 
 * Recreate in Triton or Jax for ultra mega speed boost
+
+
+## Citation
+```
+@inproceedings{ding2023longnet,
+  title={LongNet: Scaling Transformers to 1,000,000,000 Tokens},
+  author={Ding, Jiayu and Ma, Shuming and Dong, Li and Zhang, Xingxing and Huang, Shaohan and Wang, Wenhui and Wei, Furu},
+  booktitle={Proceedings of the 10th International Conference on Learning Representations},
+  year={2023}
+}
+```
