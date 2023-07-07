@@ -1,6 +1,5 @@
-from torchscale.torchscale.architecture.decoder import DecoderConfig
 import torch
-from torchscale.architecture.decoder import Decoder
+from LongNet import DecoderConfig, Decoder
 
 from torchscale.component.embedding import PositionalEmbedding
 from transformers import CLIPProcessor, CLIPModel, AutoTokenizer
