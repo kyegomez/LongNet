@@ -4,3 +4,6 @@ flash-attn
 
 accelerate
 bitsandbytes
+fairscale
+
+timm
