@@ -20,7 +20,7 @@ setup(
     install_requires=[
         'torch',
         'einops',
-        'flash-attn==1.0.5',
+        'flash-attn',
         'accelerate',
         'bitsandbytes',
         'fairscale',
