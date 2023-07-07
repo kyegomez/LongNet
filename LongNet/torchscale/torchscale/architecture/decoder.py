@@ -112,6 +112,7 @@ class DecoderLayer(nn.Module):
             args.decoder_dilation_rate,
             args.decoder_segment_size,
             dropout=args.attention_dropout, #specify dropout
+            casual=args.casual
             )
     def build_encoder_attention(self, embed_dim, args):
         return DilatedAttention(
@@ -120,6 +121,7 @@ class DecoderLayer(nn.Module):
             args.decoder_dilation_rate,
             args.decoder_segment_size,
             dropout=args.attention_dropout, #specify dropout
+            casual=args.casual
         )
 
     def residual_connection(self, x, residual):
