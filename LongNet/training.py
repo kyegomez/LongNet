@@ -40,9 +40,10 @@ from transformers import (AutoTokenizer, default_data_collator,
 
 # INTEGRATE LONGNET selector + stable8bitfusedadam
 
-from LongNet.torchscale.torchscale.architecture.decoder import Decoder
+# from LongNet.torchscale.torchscale.architecture.decoder import Decoder
+from LongNet.torchscale import Decoder
 from LongNet.utils import StableAdamWUnfused
-from LongNet.model import LongNetTokenizer, LongNet
+from LongNet.model import LongNet
 ############ SETUP CONFIG
 # import torch.distributed as dist
 

@@ -1,10 +1,11 @@
 # from LongNet.model import LongNetTokenizer, LongNetSelector
 import torch
-from model import LongNetTokenizer, LongNetSelector
+# from model import LongNetTokenizer, 
+from .model import LongNetTokenizer, LongNet
 
 class LongNetTest:
     def __init__(self):
-        self.longnet_selector = LongNetSelector()
+        self.longnet_selector = LongNet()
         self.tokenizer = LongNetTokenizer()
 
     def run_test(self, model_type: str):

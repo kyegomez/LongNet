@@ -1,12 +1,9 @@
 import torch
-from LongNet import DecoderConfig, Decoder
-
-from torchscale.component.embedding import PositionalEmbedding
-from transformers import CLIPProcessor, CLIPModel, AutoTokenizer
-from flamingo_pytorch import PerceiverResampler
-
 from torch.nn import Embedding, Module
 import bitsandbytes
+
+from LongNet.torchscale import DecoderConfig, Decoder, PositionalEmbedding
+from transformers import AutoTokenizer
 
 # 
 class LongNetTokenizer:
