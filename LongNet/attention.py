@@ -10,6 +10,28 @@ device = "cuda:0"
 dtype=torch.float16
 
 class DilatedAttention(nn.Module):
+    """
+    Dilated Attention Module.
+
+    Arguments:
+        d_model: The dimension of the attention layers.
+        num_heads: The number of attention heads.
+        dilation_rate: The dilation rate for dilated attention.
+        segment_size: The segment size for dilated attention.
+        dropout (optional): The dropout probability. Default: 0.0
+        casual (optional): If set to True, the attention mechanism is casual. Default: False
+        use_xpos (optional): If set to True, xpos is used for positional encoding. Default: False
+        use_rel_pos_bias (optional): If set to True, relative position bias is used in the attention mechanism. Default: False
+
+    Usage:
+        The `DilatedAttention` class can be used as a module for neural networks and is especially suited for transformer architectures.
+
+        Example:
+            attention = DilatedAttention(d_model=512, num_heads=8, dilation_rate=2, segment_size=64, use_xpos=True, use_rel_pos_bias=True)
+            output = attention(input_tensor)
+
+        This will return the output tensor after applying dilated attention. The `use_xpos` and `use_rel_pos_bias` parameters allow for switching on positional encoding and relative positional bias respectively.
+    """
     def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
         super(DilatedAttention, self).__init__()
         self.d_model = d_model
