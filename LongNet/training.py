@@ -42,7 +42,7 @@ from transformers import (AutoTokenizer, default_data_collator,
 
 from LongNet.torchscale.torchscale.architecture.decoder import Decoder
 from LongNet.utils import StableAdamWUnfused
-from LongNet.model import LongNet, LongNetLanguage, LongNetSelector, LongNetTokenizer
+from LongNet.model import LongNetSelector, LongNetTokenizer
 ############ SETUP CONFIG
 # import torch.distributed as dist
 
