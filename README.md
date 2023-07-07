@@ -272,6 +272,14 @@ Thank you for sharing!
 
 # Roadmap
 
+* Integrate Model, tokenizer, and train function without file path
+
+* Create a benchmarking suite against other attentions
+
+* Add unit testing for `DilationAttention`
+
+* Create a multi-modal `DilationAttention` with multiway, sub layernorm, and xpos?
+
 * Integrate Alibi and xpos for even further ridicoulus length extrapolation
 
 * Create a multi-modality verison with sub layer norm
@@ -292,3 +300,4 @@ Thank you for sharing!
   year={2023}
 }
 ```
+
