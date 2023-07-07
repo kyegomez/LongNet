@@ -42,7 +42,7 @@ from transformers import (AutoTokenizer, default_data_collator,
 
 from LongNet.torchscale.torchscale.architecture.decoder import Decoder
 from LongNet.utils import StableAdamWUnfused
-from LongNet.model import LongNetSelector, LongNetTokenizer
+from LongNet.model import LongNetTokenizer, LongNet
 ############ SETUP CONFIG
 # import torch.distributed as dist
 
@@ -484,7 +484,7 @@ def Train():
 
     # model = LongNet.to(accelerator.device)
     # model = AutoModelForCausalLM.from_pretrained("YOUR MODEL", load_in_4bit=True, device_map="auto").to(accelerator.device)
-    LongNetSelector(mode="language").to(accelerator.device)
+    LongNet().to(accelerator.device)
 
     print_num_params(model, accelerator)
 
