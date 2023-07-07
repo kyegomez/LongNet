@@ -1,7 +1,7 @@
 import torch
 import unittest
 from transformers import TrainingArguments, Trainer
-from LongNet.model import LongNetTokenizer, LongNet, 
+from LongNet.model import LongNetTokenizer, LongNet
 
 class TestLongNetModels(unittest.TestCase):
     def setUp(self):
@@ -29,7 +29,7 @@ class TestLongNetModels(unittest.TestCase):
 
     def get_sample_dataset(self):
         # generate a simple dataset for testing
-        data = {'target_text': ["This is a test sentence."] * 10,}
+        data = {'target_text': ["This is a test sentence."] * 10}
 
         # Tokenize dataset
         inputs = self.tokenizer.tokenize(data)
