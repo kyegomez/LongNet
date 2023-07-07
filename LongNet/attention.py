@@ -36,9 +36,9 @@ class DilatedAttention(nn.Module):
 
 
 
-class LongNet(nn.Module):
+class LongNetTransformer(nn.Module):
     def __init__(self, d_model, num_heads, dilation_rates, segment_sizes):
-        super(LongNet, self).__init__()
+        super(LongNetTransformer, self).__init__()
         assert len(dilation_rates) == len(segment_sizes), "dilation_rates and segment_sizes should have the same length"
 
 
