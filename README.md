@@ -130,7 +130,7 @@ In the example above, we create an instance of the `DilatedAttention` class with
 
 ```python
 class DilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, causal=False):
+    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, causal=False, use_xpos=False, use_rel_pos_bias=False ):
         ...
 ```
 
@@ -148,6 +148,10 @@ class DilatedAttention(nn.Module):
 
 - `causal` (bool, optional): If True, a causal mask will be applied to the attention outputs, preventing any given position from attending to future positions. Default is False.
 
+- `use_xpos` (optional): If set to True, xpos is used for positional encoding. Default: False
+
+- `use_rel_pos_bias` (optional): If set to True, relative position bias is used in the attention mechanism. Default: False
+
 ## Usage
 
 ### Creating an Instance
@@ -155,7 +159,7 @@ class DilatedAttention(nn.Module):
 First, you need to create an instance of the `DilatedAttention` class. Here is how you do it:
 
 ```python
-dilated_attn = DilatedAttention(d_model=512, num_heads=8, dilation_rate=2, segment_size=64, dropout=0.1, causal=True)
+dilated_attn = DilatedAttention(d_model=512, num_heads=8, dilation_rate=2, segment_size=64, dropout=0.1, causal=True, use_xpos=False, use_rel_pos_bias=False)
 ```
 
 In this example, we're creating a `DilatedAttention` layer with a model dimensionality of 512, 8 attention heads, a dilation rate of 2, a segment size of 64, a dropout rate of 0.1, and causal masking enabled.
@@ -184,7 +188,7 @@ class SimpleTransformer(nn.Module):
     def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout):
         super().__init__()
 
-        self.dilated_attn = DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, causal=True)
+        self.dilated_attn = DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, causal=True, use_xpos=False, use_rel_pos_bias=False)
         self.fc = nn.Linear(d_model, 10)  # Assume we're doing a 10-class classification task
 
     def forward(self, x):
