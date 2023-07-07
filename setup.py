@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(
   name = 'LongNet',
   packages = find_packages(exclude=[]),
-  version = '0.0.2',
+  version = '0.0.3',
   license='MIT',
   description = 'LongNet - Pytorch',
   author = 'Kye Gomez',
@@ -20,7 +20,9 @@ setup(
     install_requires=[
         'torch',
         'einops',
-        'flash_attn'
+        'flash-attn',
+        'accelerate',
+        'bitsandbytes'
     ],
   classifiers=[
     'Development Status :: 4 - Beta',

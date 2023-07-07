@@ -97,6 +97,29 @@ outputs = attention(inputs)
 print(outputs.shape)  # Expected: [batch_size, seq_len, d_model]
 ```
 
+# Training the Model
+There are 2 methods, one is `accelerate` and the other `from LongNet import Train`
+
+### Method 1 
+
+* Git clone installation
+
+* Init your parameters `accelerate config`
+
+* Then `accelerate LongNet/training.py`
+
+# Method 2
+
+* Pip install method
+
+```python
+
+from LongNet import Train
+
+Train()
+
+```
+
 In the example above, we create an instance of the `DilatedAttention` class with the specified hyperparameters. We then generate some dummy input data and pass it through the attention mechanism to obtain the outputs. Finally, we print the shape of the output tensor.
 
 ## DilatedAttention Documentation
