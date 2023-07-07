@@ -1,39 +1,38 @@
-import torch 
-from LongNet import LongNet
+import timeit
+import torch
+from LongNet import DilatedAttention
 
-# Specify the device and dtype
-device = "cuda:0"
-dtype = torch.float16
 
-# Specify the hyperparameters
-d_model = 128
+#model config
+d_model = 512
 num_heads = 8
-dilation_rates = [1, 2, 4, 8]
-segment_sizes = [64, 64, 64, 64]
+dilation_rate = 2
+segment_size = 64
 
-# Create the model
-model = LongNet(
-    d_model=d_model, 
-    num_heads=num_heads, 
-    dilation_rates=dilation_rates, 
-    segment_sizes=segment_sizes
-).to(device)
+device = "cuda:0"
+dtype=torch.float16
 
-# Create some dummy data
-x = torch.randn((64, 256, 128), device=device, dtype=dtype)
-
-# Forward pass
-output = model(x)
-
-print(output.shape)  # Expected: [64, 256, 128]
+#input data
+batch_size = 32
+seq_len = 1024
 
 
-
-"""This example creates a LongNet model with four dilated attention layers. 
-Each layer operates on a different dilation rate and has the same segment size. 
-The dummy data is 256 steps long and the output should be of the same length (i.e., [batch_size, seq_len, d_model]). 
-This example does not include any form of training, but you can add a loss function and optimizer as needed."""
+#create model and data
+model = DilatedAttention(d_model, num_heads, dilation_rate, segment_size).to(device)
+x = torch.randn((batch_size, seq_len, d_model), device=device, dtype=dtype)
 
 
+#test forward pass
+with torch.no_grad():
+    output = model(x)
+    print(f"Output shape: {output.shape}") # expected (batch_size, seq_Len)
 
 
+#benchmark model
+num_runs = 1000
+start_time = timeit.default_timer()
+for _ in range(num_runs):
+    model(x)
+
+elapsed_time = timeit.default_timer() - start_time
+print(f"Average forward pass time: {elapsed_time / num_runs:.6f} seconds")
