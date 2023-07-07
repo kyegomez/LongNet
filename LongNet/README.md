@@ -155,3 +155,81 @@ class MultiModalDilatedAttention(nn.Module):
 In this Python implementation, `x` is expected to be a list of tensors, each corresponding to a different modality. The `DilatedAttention` mechanism is applied to each modality independently, and the results are then concatenated and passed through a final `DilatedAttention` mechanism to capture cross-modality interactions.
 
 Please note that this is a fairly straightforward extension of DilatedAttention to multiple modalities and might require further enhancements to optimally deal with multi-modal data. For instance, attention normalization or scaling might be needed when concatenating modality-specific attention outputs. The choice of the final cross-modality attention mechanism could also be modified as per the needs of your specific application.
+
+
+# Implementing SOTA methods
+
+Implementing Relative Position Bias and Rotary Position Embedding (XPOS) into the Dilated Attention module can add positional information to the model, enhancing the attention mechanism's ability to understand sequential dependencies.
+
+1. **Relative Position Bias**: This approach computes relative distances between the positions in the sequence and uses these distances to modify the attention scores. This allows the model to understand and utilize the relative position of tokens in the sequence, which is particularly important in many language tasks.
+
+2. **Rotary Position Embedding (XPOS)**: This approach is a variant of sinusoidal position embedding that applies a continuous rotation to each token’s embedding. This can be more efficient and flexible compared to standard position embeddings, as it does not require storing separate embeddings for each position.
+
+Both of these additions provide information about the order of tokens in a sequence, which can be crucial for many tasks.
+
+However, they add to the complexity of the model, which may have implications for computational cost and memory usage. Also, they may introduce challenges in training, as the model must learn to effectively integrate this positional information.
+
+**Implementation**:
+
+Let's integrate the `RelativePositionBias` and `XPOS` into the `DilatedAttention` class. 
+
+```python
+class DilatedAttention(nn.Module):
+    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False):
+        super(DilatedAttention, self).__init__()
+        self.d_model = d_model
+        self.num_heads = num_heads
+
+        self.dilation_rate = dilation_rate
+        self.segment_size = segment_size
+
+        self.attention = FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype)
+        self.dropout = nn.Dropout(dropout)
+        self.casual = casual
+
+        self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=num_heads)
+        self.xpos = XPOS(head_dim=d_model//num_heads)
+
+    def get_mask(self, i, j):
+        return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
+
+    def forward(self, x):
+        batch_size, seq_len, _ = x.shape
+
+        # Apply XPOS
+        x = self.xpos(x)
+        
+        # Split and sparsify
+        x = x.view(batch_size, -1, self.segment_size, self.d_model)
+        x = x[:, :, :: self.dilation_rate, :]
+
+        # Perform attention
+        attn_output, _ = self.attention(x, x, x)
+
+        # Apply relative position bias
+        attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
+
+        # if casual create a mask and apply to the output
+        if self.casual:
+            mask = self.get_mask(attn_output.size(1), attn_output.size(1))
+            attn_output = attn_output.masked_fill(mask, float('-inf'))
+
+        # apply dropout
+        attn_output = self.dropout(attn_output)
+
+        # Scatter and concatenate 
+        attn_output = attn_output.view(batch_size, -1, self.d_model)
+        return attn_output
+```
+
+**New Documentation**:
+
+`DilatedAttention` now includes `RelativePositionBias` and `XPOS` for incorporating positional information. 
+
+`RelativePositionBias` adds a bias to the attention scores based on the relative distances between sequence positions. This mechanism is controlled by the `num_buckets`, `max_distance`, and `n_heads` parameters.
+
+`XPOS` applies rotary position embeddings to the input sequence, giving positional context to the model.
+
+Both features can be helpful in tasks where sequence order matters. They are automatically applied in the forward method, but keep in mind that these add to the model complexity.
+
+Use this model just like the previous version. The input to the forward method is a tensor with shape `(batch_size, seq_len, d_model)`, where `seq_len` is the sequence length and `d_model` is the model dimension. It returns an output tensor with the same shape. The model takes care of applying the `RelativePositionBias` and `XPOS` transformations automatically.

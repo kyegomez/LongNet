@@ -3,12 +3,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from flash_attn.flash_attention import FlashMHA
 
+from LongNet import XPOS, RelativePositionBias
+
 # Replace this with your correct GPU device
 device = "cuda:0"
 dtype=torch.float16
 
 class DilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False):
+    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
         super(DilatedAttention, self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
@@ -20,12 +22,23 @@ class DilatedAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.casual = casual
 
+        self.use_xpos = use_xpos
+        self.use_rel_pos_bias = use_rel_pos_bias
+
+        if use_xpos:
+            self.xpos = XPOS(head_dim=d_model//num_heads)
+        if use_rel_pos_bias:
+            self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=num_heads)
+
     def get_mask(self, i, j):
-        return torch.ones((i, j), deice=device, dtype=torch.bool).triu(j - i + 2)
+        return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
 
     def forward(self, x):
         batch_size, seq_len, _ = x.shape
 
+        if self.use_xpos:
+            x = self.xpos(x)
+        
         # Split and sparsify
         x = x.view(batch_size, -1, self.segment_size, self.d_model)
         x = x[:, :, :: self.dilation_rate, :]
@@ -33,12 +46,15 @@ class DilatedAttention(nn.Module):
         # Perform attention
         attn_output, _ = self.attention(x, x, x)
 
-        #if casual create a mask and apply to the output
+        if self.use_rel_pos_bias:
+            attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
+
+        # if casual create a mask and apply to the output
         if self.casual:
             mask = self.get_mask(attn_output.size(1), attn_output.size(1))
             attn_output = attn_output.masked_fill(mask, float('-inf'))
 
-        #apply dropout
+        # apply dropout
         attn_output = self.dropout(attn_output)
 
         # Scatter and concatenate 
