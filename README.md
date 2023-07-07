@@ -106,7 +106,7 @@ There are 2 methods, one is `accelerate` and the other `from LongNet import Trai
 
 * Init your parameters `accelerate config`
 
-* Then `accelerate LongNet/training.py`
+* Then `accelerate launch LongNet/training.py`
 
 # Method 2
 
