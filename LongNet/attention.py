@@ -12,7 +12,7 @@ class DilatedAttention(nn.Module):
         super(DilatedAttention, self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
-        
+
         self.dilation_rate = dilation_rate
         self.segment_size = segment_size
 
@@ -46,6 +46,27 @@ class DilatedAttention(nn.Module):
         return attn_output
 
 
+
+class MultiModalDilationAttention(nn.Module):
+    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, num_modalities=2):
+        super(MultiModalDilationAttention, self).__init__()
+
+        self.d_model = d_model
+        self.num_modalities = num_modalities
+        self.dilated_attns = nn.ModuleList(
+            [DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, casual) for _ in range(num_modalities)]
+        )
+        self.cross_modality_attn = DilatedAttention(num_modalities * d_model, num_heads, dilation_rate, segment_size, dropout, casual)
+
+    def forward(self, x):
+        modality_outputs = []
+        for modality_data, attn in zip(x, self.dilated_attns):
+            modality_outputs.append(attn(modality_data))
+        
+        cross_modality_input = torch.cat(modality_outputs, dim=-1)
+        cross_modality_output = self.cross_modality_attn_(cross_modality_input)
+
+        return cross_modality_output
 
 class LongNetTransformer(nn.Module):
     def __init__(self, d_model, num_heads, dilation_rates, segment_sizes):
