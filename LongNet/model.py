@@ -1,4 +1,4 @@
-from LongNet.torchscale.torchscale.architecture.decoder import DecoderConfig
+from torchscale.torchscale.architecture.decoder import DecoderConfig
 import torch
 from torchscale.architecture.decoder import Decoder
 
