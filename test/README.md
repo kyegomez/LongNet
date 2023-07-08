@@ -44,3 +44,69 @@ A robust testing suite is crucial to ensure the readiness of a Transformer-based
 Keep in mind that testing is an iterative process that you will likely need to revisit as you develop and refine your model. It's an integral part of the development lifecycle and essential for building reliable and efficient models.
 
 
+The three key metrics for testing the effectiveness of the `DilatedAttention` model are:
+
+1. **Attention Consistency**: The primary function of the attention mechanism is to assign different weights to different parts of the input sequence. A common way to check this is to compare the output from the attention mechanism with a uniform distribution. If the attention weights are too similar to a uniform distribution, then the attention mechanism is not providing any meaningful contribution.
+
+2. **Speed**: An important factor for attention mechanisms is the speed at which they process sequences. A dilated attention mechanism is expected to be faster than a standard attention mechanism, especially for long sequences. Thus, the speed of processing sequences of different lengths could be a critical metric.
+
+3. **Gradient Flow**: In deep learning models, especially ones with attention mechanisms, it's important to ensure that the gradients can flow effectively through the network during backpropagation. Vanishing and exploding gradients can be a serious issue. We can track the norms of the gradients during backpropagation to make sure they are at a reasonable scale.
+
+Here is how you can incorporate these metrics into the existing testing framework:
+
+```python
+import unittest
+import torch
+import time
+
+from models import DilatedAttention, MultiModalDilationAttention
+
+
+class TestDilatedAttention(unittest.TestCase):
+
+    def test_attention_consistency(self):
+        # Setup
+        input_tensor = torch.randn(2, 128, 512)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+
+        # Action
+        output = dilated_attention(input_tensor)
+
+        # Assert
+        self.assertTrue((output.std(dim=-1) > 0).all())
+
+    def test_speed(self):
+        # Setup
+        input_tensor = torch.randn(2, 1024, 512)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+
+        # Action
+        start_time = time.time()
+        output = dilated_attention(input_tensor)
+        end_time = time.time()
+
+        # Assert
+        self.assertLess(end_time - start_time, 1)
+
+    def test_gradient_flow(self):
+        # Setup
+        input_tensor = torch.randn(2, 128, 512, requires_grad=True)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+
+        # Action
+        output = dilated_attention(input_tensor)
+        output.sum().backward()
+        grad_norm = input_tensor.grad.norm().item()
+
+        # Assert
+        self.assertLess(grad_norm, 1e6)
+        self.assertGreater(grad_norm, 1e-6)
+
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+Note: The threshold values in the assertions are arbitrarily chosen for demonstration purposes. Depending on the specific use case and requirements, you may need to adjust these threshold values.
+
+Remember that these tests are based on an ideal scenario and might not hold true for every situation. Real-world datasets and conditions may lead to different results and may need different validation checks.
