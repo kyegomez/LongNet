@@ -3,7 +3,7 @@ This implementation of LongNet is brought to you by Agora, we're an all-new open
 
 ![Agora banner](agora-banner-water.png)
 
-[Join us and help contribute to LongNet and or recieve support in the Agora discord!](https://discord.gg/qUtxnK2NMf)
+[Join us and help contribute to LongNet and or receive support in the Agora discord!](https://discord.gg/qUtxnK2NMf)
 
 # LongNet: Scaling Transformers to 1,000,000,000 Tokens
 
