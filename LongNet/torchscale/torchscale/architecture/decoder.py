@@ -123,8 +123,10 @@ class DecoderLayer(nn.Module):
             args.decoder_dilation_rate,
             args.decoder_segment_size,
             dropout=args.attention_dropout, #specify dropout
-            casual=args.casual
-        )
+            casual=args.casual,
+            use_xpos=args.use_xpos,
+            use_rel_pos_bias=args.use_rel_pos_bias
+            )
 
     def residual_connection(self, x, residual):
         return residual * self.alpha + x
