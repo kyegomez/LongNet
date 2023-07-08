@@ -2,9 +2,9 @@ import time
 import unittest
 import torch
 
-# from ..attention import DilatedAttention, MultiModalDilationAttention
+from LongNet import DilatedAttention, MultiModalDilationAttention
 
-from .attention import DilatedAttention, MultiModalDilationAttention
+
 class TestDilatedAttention(unittest.TestCase):
 
     def test_output_shape(self):
