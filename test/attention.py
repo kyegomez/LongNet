@@ -2,8 +2,8 @@ import time
 import unittest
 import torch
 
-# from LongNet import DilatedAttention, MultiModalDilationAttention
-from ..LongNet.attention import DilatedAttention, MultiModalDilationAttention
+
+from LongNet.attention import DilatedAttention, MultiModalDilationAttention
 
 class TestDilatedAttention(unittest.TestCase):
 
