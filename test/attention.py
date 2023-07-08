@@ -79,6 +79,41 @@ class TestDilatedAttention(unittest.TestCase):
         self.assertLess(grad_norm, 1e6)
         self.assertGreater(grad_norm, 1e-6)
 
+    def test_scaling(self):
+        input_tensor = torch.randn(2, 1024, 512)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+        start_time = time.time()
+        _ = dilated_attention(input_tensor)
+        time_for_1024 = time.time() - start_time
+        
+        input_tensor = torch.randn(2, 2048, 512)
+        start_time = time.time()
+        _ = dilated_attention(input_tensor)
+        time_for_2048 = time.time() - start_time
+        
+        self.assertLessEqual(time_for_2048/time_for_1024, 2)
+    
+    def test_reproducibility(self):
+        torch.manual_seed(0)
+        input_tensor = torch.randn(2, 128, 512)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+        output1 = dilated_attention(input_tensor)
+        
+        torch.manual_seed(0)
+        input_tensor = torch.randn(2, 128, 512)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+        output2 = dilated_attention(input_tensor)
+        
+        self.assertTrue(torch.allclose(output1, output2))
+    
+    def test_attention_distribution(self):
+        input_tensor = torch.randn(2, 128, 512)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+        _, attn_weights = dilated_attention(input_tensor)
+        
+        self.assertTrue(torch.allclose(attn_weights.sum(dim=-1), torch.tensor(1.)))
+    
+
 
 
 
