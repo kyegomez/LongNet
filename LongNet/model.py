@@ -2,7 +2,7 @@ import torch
 from torch.nn import Embedding, Module
 import bitsandbytes
 
-from LongNet.torchscale import DecoderConfig, Decoder, PositionalEmbedding
+from torchscale import DecoderConfig, Decoder, PositionalEmbedding
 from transformers import AutoTokenizer
 
 # 
