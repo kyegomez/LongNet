@@ -40,43 +40,45 @@ class TestDilatedAttention(unittest.TestCase):
         # Assert
         self.assertEqual(output.shape, (2, 128, 512))
 
+    
     def test_attention_consistency(self):
-        #setup
+        # Setup
         input_tensor = torch.randn(2, 128, 512)
         dilated_attention = DilatedAttention(512, 8, 2, 64)
 
-        #action
+        # Action
         output = dilated_attention(input_tensor)
 
-        #assert
+        # Assert
         self.assertTrue((output.std(dim=-1) > 0).all())
-    
+
     def test_speed(self):
-        #setup
+        # Setup
         input_tensor = torch.randn(2, 1024, 512)
         dilated_attention = DilatedAttention(512, 8, 2, 64)
 
-        #action
+        # Action
         start_time = time.time()
         output = dilated_attention(input_tensor)
         end_time = time.time()
 
-        #assert
+        # Assert
         self.assertLess(end_time - start_time, 1)
 
     def test_gradient_flow(self):
-        #setup 
+        # Setup
         input_tensor = torch.randn(2, 128, 512, requires_grad=True)
         dilated_attention = DilatedAttention(512, 8, 2, 64)
 
-        #action
+        # Action
         output = dilated_attention(input_tensor)
         output.sum().backward()
         grad_norm = input_tensor.grad.norm().item()
 
-        #assert
+        # Assert
         self.assertLess(grad_norm, 1e6)
         self.assertGreater(grad_norm, 1e-6)
+
 
 
 
