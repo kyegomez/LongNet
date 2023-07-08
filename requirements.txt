@@ -1,0 +1,12 @@
+torch
+einops
+flash-attn
+
+accelerate
+bitsandbytes
+fairscale
+
+timm
+flamingo-pytorch
+ninja
+packaging

@@ -1,0 +1,1 @@
+from flash_attn.flash_attn.flash_attention import FlashMHA
