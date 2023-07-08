@@ -70,6 +70,7 @@ class DilatedAttention(nn.Module):
         # Perform attention
         attn_output, _ = self.attention(x, x, x)
 
+        #if use rel pos => apply relative positioning bias 
         if self.use_rel_pos_bias:
             attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
 
