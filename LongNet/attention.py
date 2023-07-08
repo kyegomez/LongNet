@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from LongNet.flash_attn.flash_attn.flash_attention import FlashMHA
+from LongNet.flash_attn import  FlashMHA
 
 from torchscale import XPOS, RelativePositionBias
 
