@@ -110,3 +110,59 @@ if __name__ == '__main__':
 Note: The threshold values in the assertions are arbitrarily chosen for demonstration purposes. Depending on the specific use case and requirements, you may need to adjust these threshold values.
 
 Remember that these tests are based on an ideal scenario and might not hold true for every situation. Real-world datasets and conditions may lead to different results and may need different validation checks.
+
+
+Here are three additional tests that can further evaluate the `DilatedAttention` mechanism's speed, reliability, scalability, and reasoning capabilities:
+
+1. **Scaling Test**: Evaluate how the DilatedAttention scales with increasing sequence lengths. As sequence length increases, does the model still perform effectively? 
+
+2. **Reproducibility Test**: Check whether the model gives the same output for the same input. This is essential to ensure that the model behaves deterministically, which is important for debugging and replication of results.
+
+3. **Attention Distribution Test**: Validate if the attention weights sum to 1 over all positions. This ensures that the attention mechanism is correctly implemented as a weighted average.
+
+Here is how you can add these tests to your testing framework:
+
+```python
+class TestDilatedAttention(unittest.TestCase):
+    #...existing tests...
+    
+    def test_scaling(self):
+        input_tensor = torch.randn(2, 1024, 512)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+        start_time = time.time()
+        _ = dilated_attention(input_tensor)
+        time_for_1024 = time.time() - start_time
+        
+        input_tensor = torch.randn(2, 2048, 512)
+        start_time = time.time()
+        _ = dilated_attention(input_tensor)
+        time_for_2048 = time.time() - start_time
+        
+        self.assertLessEqual(time_for_2048/time_for_1024, 2)
+    
+    def test_reproducibility(self):
+        torch.manual_seed(0)
+        input_tensor = torch.randn(2, 128, 512)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+        output1 = dilated_attention(input_tensor)
+        
+        torch.manual_seed(0)
+        input_tensor = torch.randn(2, 128, 512)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+        output2 = dilated_attention(input_tensor)
+        
+        self.assertTrue(torch.allclose(output1, output2))
+    
+    def test_attention_distribution(self):
+        input_tensor = torch.randn(2, 128, 512)
+        dilated_attention = DilatedAttention(512, 8, 2, 64)
+        _, attn_weights = dilated_attention(input_tensor)
+        
+        self.assertTrue(torch.allclose(attn_weights.sum(dim=-1), torch.tensor(1.)))
+    
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+As before, the threshold values in the assertions are arbitrarily chosen for demonstration purposes. Depending on the specific use case and requirements, you may need to adjust these threshold values.
