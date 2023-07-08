@@ -1,7 +1,7 @@
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
-from flash_attn.flash_attention import FlashMHA
+from flash_attn import FlashMHA
 
 from torchscale import XPOS, RelativePositionBias
 

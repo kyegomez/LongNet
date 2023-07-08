@@ -8,3 +8,5 @@ fairscale
 
 timm
 flamingo-pytorch
+ninja
+packaging
