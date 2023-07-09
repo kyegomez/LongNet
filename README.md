@@ -47,6 +47,13 @@ cd LongNet
 pip install -r requirements.txt
 ```
 
+4. Then Install dependencies for flash_attn
+
+* `cd flash_attn`
+
+* `python setup.py install`
+
+
 ### Method 2: Pip Install
 
 1. Install LongNet directly from PyPI using pip:
