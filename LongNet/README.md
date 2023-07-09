@@ -233,3 +233,175 @@ class DilatedAttention(nn.Module):
 Both features can be helpful in tasks where sequence order matters. They are automatically applied in the forward method, but keep in mind that these add to the model complexity.
 
 Use this model just like the previous version. The input to the forward method is a tensor with shape `(batch_size, seq_len, d_model)`, where `seq_len` is the sequence length and `d_model` is the model dimension. It returns an output tensor with the same shape. The model takes care of applying the `RelativePositionBias` and `XPOS` transformations automatically.
+
+
+Taking into account the multi-head attention specifics and computational complexity from the paper, the `DilatedAttention` class can be updated as follows. Now we include an offset for each attention head when selecting the query, key, and value vectors. And the outputs of different heads are concatenated into a final output as described in the paper.
+
+The attention computation complexity estimation formulas from the paper are a great way to theoretically assess the efficiency of the algorithm, but they're not directly incorporated into the code since they don't affect the actual functionality of the algorithm. However, they can be used as a reference when testing and optimizing the algorithm.
+
+Please note, handling the details of distributed training (e.g. splitting input sequences across GPUs, collecting key-value pairs across devices etc.) as described in Section 3 of the paper would need to be implemented outside of this class, typically at a higher level in the model's training loop.
+
+```python
+import torch 
+import torch.nn as nn
+import torch.nn.functional as F
+
+from torchscale import XPOS, RelativePositionBias
+
+device = "cuda:0"  # Replace this with your correct GPU device
+dtype=torch.float16
+
+class DilatedAttention(nn.Module):
+    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
+        super(DilatedAttention, self).__init__()
+        self.d_model = d_model
+        self.num_heads = num_heads
+
+        self.dilation_rate = dilation_rate
+        self.segment_size = segment_size
+
+        self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype) for _ in range(self.dilation_rate)])
+        self.dropout = nn.Dropout(dropout)
+        self.casual = casual
+
+        self.use_xpos = use_xpos
+        self.use_rel_pos_bias = use_rel_pos_bias
+
+        if use_xpos:
+            self.xpos = XPOS(head_dim=d_model//num_heads)
+        if use_rel_pos_bias:
+            self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=num_heads)
+
+    def get_mask(self, i, j):
+        return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
+
+    def forward(self, x):
+        batch_size, seq_len, _ = x.shape
+
+        if self.use_xpos:
+            x = self.xpos(x)
+
+        # Collect outputs from each attention head
+        all_head_outputs = []
+        for head_idx, attention in enumerate(self.attentions):
+            offset = head_idx % self.dilation_rate
+
+            x_ = x[:, offset::self.dilation_rate, :]  # Apply offset for each head
+            x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
+
+            attn_output, _ = attention(x_, x_, x_)
+            if self.use_rel_pos_bias:
+                attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
+
+            if self.casual:
+                mask = self.get_mask(attn_output.size(1), attn_output.size(1))
+                attn_output = attn_output.masked_fill(mask, float('-inf'))
+
+            attn_output = self.dropout(attn_output)
+
+            # Resize back to original size
+            attn_output_resized = torch.zeros((batch_size, seq_len, self.d_model), device=device, dtype=dtype)
+            attn_output_resized[:, offset::self.dilation_rate, :] = attn_output.contiguous().view(batch_size, -1, self.d_model)
+            
+            all_head_outputs.append(attn_output_resized)
+
+        # Concatenate the outputs of different heads
+        outputs_concatenated = torch.cat(all_head_outputs, dim=-1)
+
+        return outputs_concatenated
+```
+
+The offsets are now properly handled, creating a different "view" of the input for each attention head. Also, the outputs from each head are concatenated together instead of being summed, which is more in line with the traditional multi-head attention mechanism. 
+
+However, there are a few important caveats to keep in mind:
+1. The current implementation assumes the number of attention heads equals the dilation rate. If this is not the case, you will have to adjust the implementation accordingly.
+2. It also assumes that the input sequence length is divisible by the dilation rate, which might not always be the case in practice. In real situations, you would probably need to handle this by properly padding or truncating the input sequence.
+3. Depending on the specific context, applying dropout to the output of each head individually might not be the best approach. It could be beneficial to apply dropout after concatenating the outputs together.
+4. I've retained the position encoding and relative position bias options, although the paper doesn't seem to mention them. If you're trying to replicate the paper's results exactly, you might want to disable them.
+
+Here's the updated code for a distributed version of the `DilatedAttention` class. I want to emphasize that the distributed training aspect should be handled in your training loop or pipeline, as it involves the overall data and model distribution strategy that is beyond the scope of this single attention module. The provided code is just a simple demonstration of how to collect the key-value pairs from different GPUs before computing the attention:
+
+```python
+import torch
+import torch.distributed as dist
+import torch.nn as nn
+import torch.nn.functional as F
+
+from torchscale import XPOS, RelativePositionBias
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+class DistributedDilatedAttention(nn.Module):
+    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
+        super(DistributedDilatedAttention, self).__init__()
+        self.d_model = d_model
+        self.num_heads = num_heads
+
+        self.dilation_rate = dilation_rate
+        self.segment_size = segment_size
+
+        self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device) for _ in range(self.dilation_rate)])
+        self.dropout = nn.Dropout(dropout)
+        self.casual = casual
+
+        self.use_xpos = use_xpos
+        self.use_rel_pos_bias = use_rel_pos_bias
+
+        if use_xpos:
+            self.xpos = XPOS(head_dim=d_model//num_heads)
+        if use_rel_pos_bias:
+            self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=num_heads)
+
+    def get_mask(self, i, j):
+        return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
+
+    def forward(self, x):
+        batch_size, seq_len, _ = x.shape
+
+        if self.use_xpos:
+            x = self.xpos(x)
+
+        # Collect outputs from each attention head
+        all_head_outputs = []
+        for head_idx, attention in enumerate(self.attentions):
+            offset = head_idx % self.dilation_rate
+
+            x_ = x[:, offset::self.dilation_rate, :]  # Apply offset for each head
+            x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
+
+            # compute attention locally, gather the key-value pairs before computing the attention
+            attn_output, _ = attention(x_, x_, x_)
+            dist.all_gather(attn_output, attn_output)
+
+            if self.use_rel_pos_bias:
+                attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
+
+            if self.casual:
+                mask = self.get_mask(attn_output.size(1), attn_output.size(1))
+                attn_output = attn_output.masked_fill(mask, float('-inf'))
+
+            attn_output = self.dropout(attn_output)
+
+            # Resize back to original size
+            attn_output_resized = torch.zeros((batch_size, seq_len, self.d_model), device=device)
+            attn_output_resized[:, offset::self.dilation_rate, :] = attn_output.contiguous().view(batch_size, -1, self.d_model)
+            
+            all_head_outputs.append(attn_output_resized)
+
+        # Concatenate the outputs of different heads
+        outputs_concatenated = torch.cat(all_head_outputs, dim=-1)
+
+        return outputs_concatenated
+```
+This code is a simple attempt to implement the distributed strategy described in the paper, and it's far from a complete solution. In a real-world setting, you would likely need to handle many additional complexities. For instance:
+
+- Checking the availability of multiple GPUs and appropriately distributing the computation among them.
+- Efficiently handling GPU memory, to prevent out-of-memory errors when the sequence length is large.
+- Dealing with potential communication overhead when collecting the key-value pairs from different GPUs.
+- Handling edge cases where the sequence length is not perfectly divisible by the number of GPUs or the dilation rate.
+- Integrating with a larger model architecture and training loop, including handling the backward pass and parameter updates.
+- Tuning the performance to fully take advantage of the potential speed-up offered by distributed computing.
+
+Furthermore, the current implementation assumes the use of PyTorch's built-in distributed package. Depending on your specific requirements and computing environment, you might want to use a different package or even write your own custom distributed computing logic.
+
+Therefore, I'd highly recommend carefully studying PyTorch's [official documentation on distributed computing](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html) and seeking expert advice before attempting to scale this to a production-level implementation.
