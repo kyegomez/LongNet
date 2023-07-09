@@ -7,6 +7,9 @@ bitsandbytes
 fairscale
 
 timm
-flamingo-pytorch
 ninja
 packaging
+
+transformers
+unittest
+timeit
