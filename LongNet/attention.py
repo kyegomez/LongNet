@@ -91,61 +91,11 @@ class DilatedAttention(nn.Module):
 
 
 
-class MultiModalDilationAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, num_modalities=2):
-        super(MultiModalDilationAttention, self).__init__()
-
-        self.d_model = d_model
-        self.num_modalities = num_modalities
-        self.dilated_attns = nn.ModuleList(
-            [DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, casual) for _ in range(num_modalities)]
-        )
-        self.cross_modality_attn = DilatedAttention(num_modalities * d_model, num_heads, dilation_rate, segment_size, dropout, casual)
-
-    def forward(self, x):
-        modality_outputs = []
-        for modality_data, attn in zip(x, self.dilated_attns):
-            modality_outputs.append(attn(modality_data))
-        
-        cross_modality_input = torch.cat(modality_outputs, dim=-1)
-        cross_modality_output = self.cross_modality_attn_(cross_modality_input)
-
-        return cross_modality_output
-
-class LongNetTransformer(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rates, segment_sizes):
-        super(LongNetTransformer, self).__init__()
-        assert len(dilation_rates) == len(segment_sizes), "dilation_rates and segment_sizes should have the same length"
-
-
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.dilation_rates = dilation_rates
-        self.segment_sizes = segment_sizes
-        
-        self.dilated_attention_layers = nn.ModuleList(
-            [DilatedAttention(d_model, num_heads, dilation_rate, segment_size)]
-            for dilation_rate, segment_size in zip(dilation_rates, segment_sizes)
-        )
-
-    def forward(self, x):
-        #accumlate outputs from different layers
-        outputs = []
-
-        #process each dilated attention layer
-        for i in range(len(self.dilated_attention_layers)):
-            output = self.dilated_attention_layers[i](x)
-            outputs.append(output)
-
-        #combine the outputs
-        output = torch.sum(torch.stack(outputs), dim=0)
-
-        return output
-    
 
 
 
-#second iteration
+
+#second iteration the weighted sum of the different dilated + offsets for the different heads
 class DilatedAttention2(nn.Module):
     def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
         super(DilatedAttention2, self).__init__()
@@ -208,8 +158,7 @@ class DilatedAttention2(nn.Module):
 
 
 
-#distributed dilated attention
-
+#distributed dilated attention based on second iteration
 import torch.distributed as dist
 
 class DistributedDilatedAttention(nn.Module):
@@ -274,6 +223,59 @@ class DistributedDilatedAttention(nn.Module):
 
         return outputs_concatenated
 
+
+
+class MultiModalDilationAttention(nn.Module):
+    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, num_modalities=2):
+        super(MultiModalDilationAttention, self).__init__()
+
+        self.d_model = d_model
+        self.num_modalities = num_modalities
+        self.dilated_attns = nn.ModuleList(
+            [DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, casual) for _ in range(num_modalities)]
+        )
+        self.cross_modality_attn = DilatedAttention(num_modalities * d_model, num_heads, dilation_rate, segment_size, dropout, casual)
+
+    def forward(self, x):
+        modality_outputs = []
+        for modality_data, attn in zip(x, self.dilated_attns):
+            modality_outputs.append(attn(modality_data))
+        
+        cross_modality_input = torch.cat(modality_outputs, dim=-1)
+        cross_modality_output = self.cross_modality_attn_(cross_modality_input)
+
+        return cross_modality_output
+
+class LongNetTransformer(nn.Module):
+    def __init__(self, d_model, num_heads, dilation_rates, segment_sizes):
+        super(LongNetTransformer, self).__init__()
+        assert len(dilation_rates) == len(segment_sizes), "dilation_rates and segment_sizes should have the same length"
+
+
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.dilation_rates = dilation_rates
+        self.segment_sizes = segment_sizes
+        
+        self.dilated_attention_layers = nn.ModuleList(
+            [DilatedAttention(d_model, num_heads, dilation_rate, segment_size)]
+            for dilation_rate, segment_size in zip(dilation_rates, segment_sizes)
+        )
+
+    def forward(self, x):
+        #accumlate outputs from different layers
+        outputs = []
+
+        #process each dilated attention layer
+        for i in range(len(self.dilated_attention_layers)):
+            output = self.dilated_attention_layers[i](x)
+            outputs.append(output)
+
+        #combine the outputs
+        output = torch.sum(torch.stack(outputs), dim=0)
+
+        return output
+    
 
 # class DilatedAttention(nn.Module):
 #     def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
