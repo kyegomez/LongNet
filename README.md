@@ -283,6 +283,10 @@ Thank you for sharing!
 
 # Roadmap
 
+* Test and evaluate
+
+* And, create an interation of `DilatedAttention` `FlashBlocksparseMHA`
+
 * Integrate Model, tokenizer, and train function without file path
 
 * Create a benchmarking suite against other attentions
