@@ -41,25 +41,27 @@ git clone https://github.com/kyegomez/LongNet.git
 cd LongNet
 ```
 
-3. Install the required dependencies:
+3. Prepare `flash_attn` library
+
+```bash
+
+cd flash_attn
+
+python setup.py install
+
+cd ..
+
+```
+
+4. Install the required dependencies:
 
 ```shell
 pip install -r requirements.txt
 ```
 
-4. Then Install dependencies for flash_attn
-
-* `cd flash_attn`
-
-* `python setup.py install`
-
-* `cd ..`
-
-* `python3 example.py`
-
 
 ### Method 2: Pip Install
-* Note that pip install does not work as the `flash-attn` library cannot be compiled since it has custom CUDA Kernels.
+* Note that pip install does not work as the `flash-attn` library cannot be compiled since it has custom CUDA Kernels and they need to be built manually.
 
 1. Install LongNet directly from PyPI using pip:
 
