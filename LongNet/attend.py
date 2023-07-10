@@ -290,21 +290,17 @@ class FlashMHA(nn.Module):
             num_heads,
             dropout=0.0,
             self_attention=False,
-            flash_attention=False,
-            subln=False
+            flash_attention=False
         ):
-
             super().__init__()
-            self.args = args
             self.embed_dim = embed_dim
             self.num_heads = num_heads
-
-            self.head_dim = embed_dim // num_heads
-            self.scaling = self.head_dim**-0.5
-
             self.self_attention = self_attention
             self.flash_attention = flash_attention
             assert self.self_attention ^ self.flash_attention
+
+            self.head_dim = embed_dim // num_heads
+            self.scaling = self.head_dim**-0.5
 
             self.k_proj = nn.Linear(embed_dim, embed_dim, bias=True)
             self.v_proj = nn.Linear(embed_dim, embed_dim, bias=True)
@@ -313,8 +309,9 @@ class FlashMHA(nn.Module):
             
             self.dropout_module = torch.nn.Dropout(dropout)
 
-            #init flash attention
-            self.flash_attention = FlashAttention(dropout=dropout, causal=self_attention, heads=num_heads)
+            # init flash attention
+            if self.flash_attention:
+                self.flash_attention = FlashAttention(dropout=dropout, causal=self_attention, heads=num_heads)
     
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.k_proj.weight, gain=1 / math.sqrt(2))
