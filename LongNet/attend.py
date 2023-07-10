@@ -285,12 +285,13 @@ class FlashAttention(nn.Module):
 class FlashMHA(nn.Module):
     def __init__(
             self,
-            args,
             embed_dim,
             num_heads,
             dropout=0.0,
             self_attention=False,
-            flash_attention=False
+            flash_attention=False,
+            device=None,
+            dtype=None
         ):
             super().__init__()
             self.embed_dim = embed_dim
@@ -302,17 +303,19 @@ class FlashMHA(nn.Module):
             self.head_dim = embed_dim // num_heads
             self.scaling = self.head_dim**-0.5
 
-            self.k_proj = nn.Linear(embed_dim, embed_dim, bias=True)
-            self.v_proj = nn.Linear(embed_dim, embed_dim, bias=True)
-            self.q_proj = nn.Linear(embed_dim, embed_dim, bias=True)
-            self.outproj = nn.Linear(embed_dim, embed_dim, bias=True)
+            factory_kwargs = {'device': device, 'dtype': dtype}
+
+            self.k_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
+            self.v_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
+            self.q_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
+            self.outproj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
             
-            self.dropout_module = torch.nn.Dropout(dropout)
+            self.dropout_module = torch.nn.Dropout(dropout).to(device=device, dtype=dtype)
 
             # init flash attention
             if self.flash_attention:
                 self.flash_attention = FlashAttention(dropout=dropout, causal=self_attention, heads=num_heads)
-    
+                
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.k_proj.weight, gain=1 / math.sqrt(2))
         nn.init.xavier_uniform_(self.v_proj.weight, gain=1 / math.sqrt(2))
