@@ -43,7 +43,7 @@ class DilatedAttention(nn.Module):
         self.dilation_rate = dilation_rate
         self.segment_size = segment_size
 
-        self.attention = FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype)
+        self.attention = FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype, flash_attention=True)
         self.dropout = nn.Dropout(dropout)
         self.casual = casual
 

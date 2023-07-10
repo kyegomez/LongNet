@@ -250,38 +250,6 @@ class FlashAttention(nn.Module):
 
 
 
-
-# class FlashMHA(nn.Module):
-
-#     def __init__(self, embed_dim, num_heads, bias=True, batch_first=True, attention_dropout=0.0,
-#                  causal=False, device=None, dtype=None) -> None:
-#         assert batch_first
-#         factory_kwargs = {'device': device, 'dtype': dtype}
-#         super().__init__()
-#         self.embed_dim = embed_dim
-#         self.causal = causal
-
-#         self.num_heads = num_heads
-#         assert self.embed_dim % num_heads == 0, "self.kdim must be divisible by num_heads"
-#         self.head_dim = self.embed_dim // num_heads
-#         assert self.head_dim % 8 == 0 and self.head_dim <= 128, "Only support head_dim <= 128 and divisible by 8"
-
-#         self.Wqkv = nn.Linear(embed_dim, 3 * embed_dim, bias=bias, **factory_kwargs)
-#         self.inner_attn = FlashAttention(attention_dropout=attention_dropout)
-#         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias, **factory_kwargs)
-
-#     def forward(self, x, key_padding_mask=None, need_weights=False):
-#         """x: (batch, seqlen, hidden_dim) (where hidden_dim = num heads * head dim)
-#         key_padding_mask: bool tensor of shape (batch, seqlen)
-#         """
-#         qkv = self.Wqkv(x)
-#         qkv = rearrange(qkv, 'b s (n h d) -> b s n h d', n=3, h=self.num_heads)
-#         context, attn_weights = self.inner_attn(qkv, key_padding_mask=key_padding_mask,
-#                                                 need_weights=need_weights, causal=self.causal)
-#         return self.out_proj(rearrange(context, 'b s h d -> b s (h d)')), attn_weights
-
-
-
 class FlashMHA(nn.Module):
     def __init__(
             self,
@@ -289,7 +257,7 @@ class FlashMHA(nn.Module):
             num_heads,
             dropout=0.0,
             self_attention=False,
-            flash_attention=False,
+            flash_attention=True,
             device=None,
             dtype=None
         ):
@@ -315,7 +283,7 @@ class FlashMHA(nn.Module):
             # init flash attention
             if self.flash_attention:
                 self.flash_attention = FlashAttention(dropout=dropout, causal=self_attention, heads=num_heads)
-                
+
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.k_proj.weight, gain=1 / math.sqrt(2))
         nn.init.xavier_uniform_(self.v_proj.weight, gain=1 / math.sqrt(2))
