@@ -161,34 +161,25 @@ class FlashAttention(nn.Module):
 
         return out
 
-
 class FlashMHA(nn.Module):
-    def __init__(
-            self,
-            embed_dim,
-            num_heads,
-            dropout=0.0,
-            device=None,
-            dtype=None
-        ):
-            super().__init__()
-            self.embed_dim = embed_dim
-            self.num_heads = num_heads
+    def __init__(self, embed_dim, num_heads, dropout=0.0, device=None, dtype=None):
+        super().__init__()
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+        self.scaling = self.head_dim**-0.5
 
-            self.head_dim = embed_dim // num_heads
-            self.scaling = self.head_dim**-0.5
+        factory_kwargs = {'device': device, 'dtype': dtype}
 
-            factory_kwargs = {'device': device, 'dtype': dtype}
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
+        
+        self.dropout_module = nn.Dropout(dropout).to(device=device, dtype=dtype)
 
-            self.k_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
-            self.v_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
-            self.q_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
-            self.outproj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
-            
-            self.dropout_module = torch.nn.Dropout(dropout).to(device=device, dtype=dtype)
-
-            # init flash attention
-            self.flash_attention = FlashAttention(dropout=dropout, heads=num_heads, dropout=dropout, device=device, dtype=dtype)
+        # Init flash attention
+        self.flash_attention = FlashAttention(dropout=dropout, heads=num_heads, dropout=dropout, device=device, dtype=dtype)
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.k_proj.weight, gain=1 / math.sqrt(2))
