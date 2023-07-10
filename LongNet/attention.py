@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from torchscale.component.xpos_relative_position import XPOS
 from torchscale.component.relative_position_bias import RelativePositionBias
 
-from LongNet.attend import FlashMHA
+# from LongNet.attend import FlashMHA
+from flash_attn.flash_attn.flash_attention import FlashMHA
 
 # Replace this with your correct GPU device
 device = "cuda:0"
@@ -43,7 +44,7 @@ class DilatedAttention(nn.Module):
         self.dilation_rate = dilation_rate
         self.segment_size = segment_size
 
-        self.attention = FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype, flash_attention=True)
+        self.attention = FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype)
         self.dropout = nn.Dropout(dropout)
         self.casual = casual
 
