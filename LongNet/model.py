@@ -5,7 +5,6 @@ import bitsandbytes
 from torchscale import DecoderConfig, Decoder, PositionalEmbedding
 from transformers import AutoTokenizer
 
-# 
 class LongNetTokenizer:
     def __init__(self):
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -64,15 +63,3 @@ class LongNet(Module):
         model_input = self.decoder.forward_embedding(text_tokens)[0]
         return self.decoder(model_input, passed_x=model_input)[0]
         
-
-# class LongNetSelector:
-#     def __init__(self, mode="language"):
-#         assert mode in ['multimodal', 'language'], 'Invalid mode choose from multimodal or language'
-#         if mode == "multimodal":
-#             self.model = LongNet()
-#         else:
-#             self.model = LongNetLanguage()
-
-
-#     def forward(self, *args, **kwargs):
-#         return self.model(*args, **kwargs)
