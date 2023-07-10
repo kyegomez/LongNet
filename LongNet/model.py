@@ -2,8 +2,13 @@ import torch
 from torch.nn import Embedding, Module
 import bitsandbytes
 
-from torchscale import DecoderConfig, Decoder, PositionalEmbedding
 from transformers import AutoTokenizer
+
+
+from torchscale.architecture.config import DecoderConfig
+from torchscale.architecture.decoder import Decoder
+from torchscale.component.embedding import PositionalEmbedding
+
 
 class LongNetTokenizer:
     def __init__(self):
