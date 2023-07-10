@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from flash_attn.flash_attn.flash_attention import  FlashMHA
-
 from torchscale import XPOS, RelativePositionBias
+
 
 # Replace this with your correct GPU device
 device = "cuda:0"
@@ -160,7 +160,7 @@ class DilatedAttention2(nn.Module):
 
 
 from flash_attn.flash_blocksparse_attention import FlashBlocksparseMHA
-
+#perhaps integrate integrate dynamic sparse attention
 class BlocksparseDilatedAttention(nn.Module):
     def __init__(self, d_model, num_heads, dilation_rate, segment_size, sparsity_config, dropout=0.0, causal=False, use_xpos=False, use_rel_pos_bias=False):
         super(BlocksparseDilatedAttention, self).__init__()
