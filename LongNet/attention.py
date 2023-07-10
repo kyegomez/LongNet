@@ -13,7 +13,7 @@ device = "cuda:0"
 dtype=torch.float16
 
 #add alibi, qk layer norm, one write head, multihway, 
-class DilatedAttention(nn.Module):
+class DilatedAttentionold(nn.Module):
     """
     Dilated Attention Module.
 
@@ -98,9 +98,9 @@ class DilatedAttention(nn.Module):
 
 
 #second iteration the weighted sum of the different dilated + offsets for the different heads
-class DilatedAttention2(nn.Module):
+class DilatedAttention(nn.Module):
     def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
-        super(DilatedAttention2, self).__init__()
+        super(DilatedAttention, self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
 
