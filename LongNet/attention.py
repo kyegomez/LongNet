@@ -62,7 +62,7 @@ class DilatedAttention(nn.Module):
             self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=num_heads)
 
         #head offsets
-        self.head_offsets = nn.Parameer(torch.randn(num_heads, d_model))
+        self.head_offsets = nn.Parameter(torch.randn(num_heads, d_model))
 
     def get_mask(self, i, j):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)

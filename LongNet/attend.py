@@ -49,6 +49,7 @@ class FlashAttention(nn.Module):
         self,
         *,
         dropout = 0.,
+        attention_dropout=0.,
         causal = False,
         heads = None,
         talking_heads = False,
@@ -63,7 +64,8 @@ class FlashAttention(nn.Module):
         self.attn_fn = partial(F.softmax, dtype = torch.float32) if not qk_norm else F.softmax
 
         self.dropout = dropout
-        self.attn_dropout = nn.Dropout(dropout)
+
+        self.attn_dropout = nn.Dropout(attention_dropout)   # modify this line
 
         # talking heads
 
