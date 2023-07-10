@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(
   name = 'LongNet',
   packages = find_packages(exclude=[]),
-  version = '0.1.3',
+  version = '0.1.5',
   license='MIT',
   description = 'LongNet - Pytorch',
   author = 'Kye Gomez',
@@ -26,7 +26,6 @@ setup(
         'fairscale',
         'timm',
         'dataclasses',
-        ''
     ],
   classifiers=[
     'Development Status :: 4 - Beta',
