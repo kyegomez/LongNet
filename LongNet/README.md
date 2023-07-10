@@ -405,3 +405,24 @@ This code is a simple attempt to implement the distributed strategy described in
 Furthermore, the current implementation assumes the use of PyTorch's built-in distributed package. Depending on your specific requirements and computing environment, you might want to use a different package or even write your own custom distributed computing logic.
 
 Therefore, I'd highly recommend carefully studying PyTorch's [official documentation on distributed computing](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html) and seeking expert advice before attempting to scale this to a production-level implementation.
+
+
+
+The provided code implements the Dilated Attention mechanism with multiple heads and different dilation rates. However, it seems to be missing some key components mentioned in the paper:
+
+Mixture of Dilated Attentions: The paper suggests implementing a mixture of dilated attentions with different segment sizes and dilation rates. This is not implemented in the provided code. The weights for the mixture are calculated dynamically based on the denominator of the attention softmax, which is also not present in the code.
+
+Geometric Sequences for Segment Sizes and Dilation Rates: The paper suggests setting the segment sizes and dilation rates to geometric sequences for an exponential attentive field. This is not reflected in the provided code.
+
+Distributed Training Algorithm: The paper describes a distributed training algorithm that allows the model to scale up to 1 billion tokens. This is a significant feature that is not implemented in the provided code.
+
+Here's how we could implement these missing pieces:
+
+Mixture of Dilated Attentions: We could modify the forward method to compute the output for each combination of segment size and dilation rate, and then combine these outputs using the dynamic weights. The dynamic weights could be computed by adding a softmax layer that takes the denominator of the attention softmax as input.
+
+Geometric Sequences for Segment Sizes and Dilation Rates: We could modify the __init__ method to generate geometric sequences for the segment sizes and dilation rates. This could be done using the torch.logspace function.
+
+Distributed Training Algorithm: Implementing this feature would require significant changes to the code. We would need to split the input sequence across multiple devices, compute the attention on each device, and then gather the results. This could be done using PyTorch's distributed computing features, such as torch.nn.DataParallel or torch.nn.parallel.DistributedDataParallel.
+
+Please note that implementing these features would require a deep understanding of the Dilated Attention mechanism and the specific requirements of your application. It would also likely require extensive testing and debugging to ensure that the implementation is correct and efficient.
+
