@@ -20,11 +20,13 @@ setup(
     install_requires=[
         'torch',
         'einops',
-        'flash-attn',
+        'torchscale',
         'accelerate',
         'bitsandbytes',
         'fairscale',
         'timm',
+        'dataclasses',
+        ''
     ],
   classifiers=[
     'Development Status :: 4 - Beta',

@@ -277,3 +277,4 @@ class FlashMHA(nn.Module):
                                                 need_weights=need_weights, causal=self.causal)
         return self.out_proj(rearrange(context, 'b s h d -> b s (h d)')), attn_weights
     
+
