@@ -290,25 +290,13 @@ Thank you for sharing!
 
 # Roadmap
 
-* Test and evaluate
+* Test and evaluate and patch.
 
-* And, create an interation of `DilatedAttention` `FlashBlocksparseMHA`
+* And, create an interation of `DilatedAttention` with `FlashBlocksparseMHA`
 
-* Integrate Model, tokenizer, and train function without file path
-
-* Create a benchmarking suite against other attentions
-
-* Add unit testing for `DilationAttention`
-
-* Create a multi-modal `DilationAttention` with multiway, sub layernorm, and xpos?
+* Create a multi-modal `DilationAttention` with multiway, sub layernorm, and xpos, sub layernorm, QK Layernorm, One write query head maybe
 
 * Integrate Alibi and xpos for even further ridicoulus length extrapolation
-
-* Create a multi-modality verison with sub layer norm
-
-* Integrate QK Layernorm
-
-* Integrate One write query head maybe
 
 * Recreate in Triton or Jax for ultra mega speed boost
 
