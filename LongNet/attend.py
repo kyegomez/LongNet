@@ -256,17 +256,12 @@ class FlashMHA(nn.Module):
             embed_dim,
             num_heads,
             dropout=0.0,
-            self_attention=False,
-            flash_attention=True,
             device=None,
             dtype=None
         ):
             super().__init__()
             self.embed_dim = embed_dim
             self.num_heads = num_heads
-            self.self_attention = self_attention
-            self.flash_attention = flash_attention
-            assert self.self_attention ^ self.flash_attention
 
             self.head_dim = embed_dim // num_heads
             self.scaling = self.head_dim**-0.5
@@ -281,8 +276,7 @@ class FlashMHA(nn.Module):
             self.dropout_module = torch.nn.Dropout(dropout).to(device=device, dtype=dtype)
 
             # init flash attention
-            if self.flash_attention:
-                self.flash_attention = FlashAttention(dropout=dropout, causal=self_attention, heads=num_heads)
+            self.flash_attention = FlashAttention(dropout=dropout, heads=num_heads, dropout=dropout, device=device, dtype=dtype)
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.k_proj.weight, gain=1 / math.sqrt(2))
