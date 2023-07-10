@@ -119,6 +119,8 @@ class DilatedAttention(nn.Module):
         if use_rel_pos_bias:
             self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=num_heads)
 
+        self.softmax = nn.Softmax(dim=-1)
+
     def get_mask(self, i, j):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
 
@@ -152,10 +154,13 @@ class DilatedAttention(nn.Module):
             
             all_head_outputs.append(attn_output_resized)
 
-        #concatenate the outputs of different heads
-        outputs_concatenated = torch.cat(all_head_outputs, dim=-1)
+        #calculate the weights for the different dilated attentions
+        weights = self.softmax(torch.tensor([1.0 / self.dilation_rate for _ in range(self.dilation_rate)], device=device, dtype=dtype))
 
-        return outputs_concatenated
+        #apply the weights to the outputs of the different heads
+        outputs_weighted = sum(w * out for w, out in zip(weights, all_head_outputs))
+
+        return outputs_weighted
 
 
 
