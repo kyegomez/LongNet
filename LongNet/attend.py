@@ -10,6 +10,7 @@ from functools import wraps
 from packaging import version
 from dataclasses import dataclass
 
+import math
 
 # constants
 
@@ -278,3 +279,87 @@ class FlashMHA(nn.Module):
         context, attn_weights = self.inner_attn(qkv, key_padding_mask=key_padding_mask,
                                                 need_weights=need_weights, causal=self.causal)
         return self.out_proj(rearrange(context, 'b s h d -> b s (h d)')), attn_weights
+
+
+
+class FlashMultiHead(nn.Module):
+    def __init__(
+            self,
+            args,
+            embed_dim,
+            num_heads,
+            dropout=0.0,
+            self_attention=False,
+            flash_attention=False,
+            subln=False
+        ):
+
+            super().__init__()
+            self.args = args
+            self.embed_dim = embed_dim
+            self.num_heads = num_heads
+
+            self.head_dim = embed_dim // num_heads
+            self.scaling = self.head_dim**-0.5
+
+            self.self_attention = self_attention
+            self.flash_attention = flash_attention
+            assert self.self_attention ^ self.flash_attention
+
+            self.k_proj = nn.Linear(embed_dim, embed_dim, bias=True)
+            self.v_proj = nn.Linear(embed_dim, embed_dim, bias=True)
+            self.q_proj = nn.Linear(embed_dim, embed_dim, bias=True)
+            self.outproj = nn.Linear(embed_dim, embed_dim, bias=True)
+            
+            self.dropout_module = torch.nn.Dropout(dropout)
+
+            #init flash attention
+            self.flash_attention = FlashAttention(dropout=dropout, causal=self_attention, heads=num_heads)
+    
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.k_proj.weight, gain=1 / math.sqrt(2))
+        nn.init.xavier_uniform_(self.v_proj.weight, gain=1 / math.sqrt(2))
+        nn.init.xavier_uniform_(self.q_proj.weight, gain=1 / math.sqrt(2))
+        nn.init.xavier_uniform_(self.out_proj.weight)
+        nn.init.constant_(self.out_proj.bias, 0.0)
+    
+    def forward(
+            self,
+            query,
+            key,
+            value,
+            mask=None,
+            attn_mask=None,
+            incremental_state=None,
+            is_first_step=False
+        ):
+        # type: (Tensor, Tensor, Tensor, Optional[Tensor], Optional[Tensor], Optional[Dict[str, Tensor]], Optional[bool]) -> Tuple[Tensor, Optional[Tensor]]
+        tgt_len, bsz, embed_dim = query.size()
+
+        assert embed_dim == self.embed_dim
+        assert list(query.size()) == [tgt_len, bsz, embed_dim]
+
+        q = self.q_proj(query)
+        k = self.k_proj(key)
+        v = self.v_proj(value)
+
+        q *= self.scaling
+
+        q = q.view(tgt_len, bsz * self.num_heads, self.head_dim).transpose(0, 1)
+        k = k.view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)
+        v = v.view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)
+
+        if mask is not None:
+            mask = mask.unsqueeze(1).expand(-1, tgt_len, -1)
+            mask = mask.view(mask.size(0) * self.num_heads, tgt_len, -1)
+        
+        attn_weights, _ = self.flash_attention(q, k, v, mask)
+        assert list(attn_weights.size()) == [bsz * self.num_heads, tgt_len, k.size(1)]
+
+        attn_weights = self.dropout_module(attn_weights)
+        attn = torch.bmm(attn_weights, v)
+        assert list(attn.size()) == [bsz * self.num_heads, tgt_len, self.head_dim]
+        attn = attn.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+        attn = self.out_proj(attn)
+
+        return attn, attn_weights
