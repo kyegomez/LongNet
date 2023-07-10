@@ -274,9 +274,7 @@ class FlashMHA(nn.Module):
         key_padding_mask: bool tensor of shape (batch, seqlen)
         """
         qkv = self.Wqkv(x)
-        qkv = rearrange(qkv, 'b s (three h d) -> b s three h d', three=3, h=self.num_heads)
+        qkv = rearrange(qkv, 'b s (n h d) -> b s n h d', n=3, h=self.num_heads)
         context, attn_weights = self.inner_attn(qkv, key_padding_mask=key_padding_mask,
                                                 need_weights=need_weights, causal=self.causal)
         return self.out_proj(rearrange(context, 'b s h d -> b s (h d)')), attn_weights
-    
-
