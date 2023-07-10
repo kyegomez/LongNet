@@ -53,8 +53,13 @@ pip install -r requirements.txt
 
 * `python setup.py install`
 
+* `cd ..`
+
+* `python3 example.py`
+
 
 ### Method 2: Pip Install
+* Note that pip install does not work as the `flash-attn` library cannot be compiled since it has custom CUDA Kernels.
 
 1. Install LongNet directly from PyPI using pip:
 

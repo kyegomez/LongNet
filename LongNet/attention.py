@@ -10,6 +10,21 @@ from torchscale import XPOS, RelativePositionBias
 device = "cuda:0"
 dtype=torch.float16
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #add alibi, qk layer norm, one write head, multihway, 
 class DilatedAttention(nn.Module):
     """
