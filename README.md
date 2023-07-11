@@ -24,7 +24,7 @@ Experiment results demonstrate that LongNet yields strong performance on both lo
 Here's the updated usage and installation section with two methods: git clone or pip install LongNet:
 
 ## Installation
-
+c
 You can install LongNet using one of the following methods:
 
 ### Method 1: Git Clone
@@ -138,6 +138,17 @@ In the example above, we create an instance of the `DilatedAttention` class with
 
 
 # DilatedAttention Documentation
+
+## Algorithmic Psueodocode:
+```
+1. Initialize the input (Q, K, V) and split them into segments {(Qei, Kei, Vei)} with equal segment length w.
+2. Sparsify each segment along the sequence dimension by selecting the rows with an interval r.
+3. Feed the sparsified segments into the attention in parallel.
+4. Scatter and concatenate the output O from the attention.
+5. Implement a mixture of dilated attentions with different segment sizes and dilation rates {ri, wi}.
+6. For multi-head dilated attention, differ the computation among different heads by sparsifying different parts of the query-key-value pairs.
+7. Concatenate the outputs of different heads into a final output.
+```
 
 
 ## Class Definition
