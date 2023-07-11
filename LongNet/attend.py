@@ -180,13 +180,6 @@ class FlashMHA(nn.Module):
 
         # Init flash attention
         self.flash_attention = FlashAttention(dropout=dropout, heads=num_heads, dropout=dropout, device=device, dtype=dtype)
-
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.k_proj.weight, gain=1 / math.sqrt(2))
-        nn.init.xavier_uniform_(self.v_proj.weight, gain=1 / math.sqrt(2))
-        nn.init.xavier_uniform_(self.q_proj.weight, gain=1 / math.sqrt(2))
-        nn.init.xavier_uniform_(self.out_proj.weight)
-        nn.init.constant_(self.out_proj.bias, 0.0)
     
     def forward(
             self,
@@ -198,7 +191,6 @@ class FlashMHA(nn.Module):
             incremental_state=None,
             is_first_step=False
         ):
-        # type: (Tensor, Tensor, Tensor, Optional[Tensor], Optional[Tensor], Optional[Dict[str, Tensor]], Optional[bool]) -> Tuple[Tensor, Optional[Tensor]]
         tgt_len, bsz, embed_dim = query.size()
 
         assert embed_dim == self.embed_dim
