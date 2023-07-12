@@ -10,6 +10,8 @@ from torchscale.architecture.decoder import Decoder
 from torchscale.component.embedding import PositionalEmbedding
 
 
+from LongNet.Transformer import LongNet
+
 class LongNetTokenizer:
     def __init__(self):
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -24,7 +26,7 @@ class LongNetTokenizer:
         return self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True).input_ids
 
 
-class LongNet(Module):
+class LongNetTorchscale(Module):
     def __init__(self):
         super().__init__()
         self.embed = bitsandbytes.nn.modules.Embedding(
@@ -68,3 +70,22 @@ class LongNet(Module):
         model_input = self.decoder.forward_embedding(text_tokens)[0]
         return self.decoder(model_input, passed_x=model_input)[0]
         
+
+# class LongNet(Module):
+#     def __init__(self):
+#         super().__init__()
+
+#         self.model = LongNet(
+#             num_tokens = 16000,             # number of tokens
+#             dim = (512, 256),               # transformer model dimension (512 for coarsest, 256 for fine in this example)
+#             max_seq_len = (1024, 4),        # sequence length for global and then local. this can be more than 2
+#             depth = (6, 4),                 # number of layers for global and then local. this can be more than 2, but length must match the max_seq_len's
+#             dim_head = 64,                  # dimension per head
+#             heads = 8,                      # number of attention heads
+#             flash_attn = True               # use flash attention
+#         )
+
+#     def forward(self, text_tokens, temperature: int = None, filter_thres: int = None, **kwargs):
+#         sampled = self.model.generate(temperature=temperature, filter_thres=filter_thres)
+#         return sampled
+    
