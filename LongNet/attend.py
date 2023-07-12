@@ -1,13 +1,19 @@
+from torch._C import dtype
+# !pip install torch
+# !pip install einops
+
 import math
 from collections import namedtuple
 from functools import wraps
 from packaging import version
 
 import torch
-from torch import nn, einsum
+from torch import nn, einsum, Tensor
 import torch.nn.functional as F
 
 from einops import rearrange
+
+from dataclasses import dataclass
 
 # constants
 
@@ -33,14 +39,28 @@ print_once = once(print)
 
 # main class
 
+
+@dataclass
+class Intermediates:
+    qk_similarities: Tensor = None
+    pre_softmax_attn: Tensor = None
+    post_softmax_attn: Tensor = None
+
+    def to_tuple(self):
+        return (self.qk_similarities, self.pre_softmax_attn, self.post_softmax_attn)
+
+# helpers
+
+
 class FlashAttention(nn.Module):
     def __init__(
         self,
-        causal = True,
+        causal = False,
         dropout = 0.,
         flash = True
     ):
         super().__init__()
+
         self.dropout = dropout
         self.attn_dropout = nn.Dropout(dropout)
 
@@ -68,45 +88,70 @@ class FlashAttention(nn.Module):
     def get_mask(self, i, j, device):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 1)
 
-    def flash_attn(self, q, k, v, mask = None, attn_bias = None):
-        _, heads, q_len, _, k_len, is_cuda, device = *q.shape, k.shape[-2], q.is_cuda, q.device
 
-        # single headed key / values
+    def flash_attn(
+        self,
+        q, k, v,
+        mask = None,
+        attn_bias = None
+    ):
+        batch, heads, q_len, _, k_len, is_cuda, device = *q.shape, k.shape[-2], q.is_cuda, q.device
+
+        # Recommended for multi-query single-key-value attention by Tri Dao
+        # kv shape torch.Size([1, 512, 64]) -> torch.Size([1, 8, 512, 64])
 
         if k.ndim == 3:
-            k = rearrange(k, 'b n d -> b 1 n d')
+            k = rearrange(k, 'b ... -> b 1 ...').expand_as(q)
 
         if v.ndim == 3:
-            v = rearrange(v, 'b n d -> b 1 n d')
+            v = rearrange(v, 'b ... -> b 1 ...').expand_as(q)
 
+        # handle scale - by default they scale by dim_head ** -0.5, but need to take care if using cosine sim attention
         # Check if mask exists and expand to compatible shape
         # The mask is B L, so it would have to be expanded to B H N L
 
-        if exists(mask) and mask.ndim != 4:
-            mask = rearrange(mask, 'b j -> b 1 1 j')
-            mask = mask.expand(-1, heads, q_len, -1)
+        causal = self.causal
+
+        if exists(mask):
+            assert mask.ndim == 4
+            mask = mask.expand(batch, heads, q_len, k_len)
+
+            # manually handle causal mask, if another mask was given
+
+            if causal:
+                causal_mask = self.create_causal_mask(q_len, k_len, device = device)
+                mask = mask & ~causal_mask
+                causal = False
+
+        # handle alibi positional bias
+        # convert from bool to float
+
+        if exists(attn_bias):
+            attn_bias = rearrange(attn_bias, 'h i j -> 1 h i j').expand(batch, -1, -1, -1)
+
+            # if mask given, the mask would already contain the causal mask from above logic
+            # otherwise, if no mask given but still causal, mask out alibi positional bias to a large negative number
+
+            mask_value = -torch.finfo(q.dtype).max
+
+            if exists(mask):
+                attn_bias = attn_bias.masked_fill(~mask, mask_value // 2)
+            elif causal:
+                causal_mask = self.create_causal_mask(q_len, k_len, device = device)
+                attn_bias = attn_bias.masked_fill(causal_mask, mask_value // 2)
+                causal = False
+
+            # scaled_dot_product_attention handles attn_mask either as bool or additive bias
+            # make it an additive bias here
+
+            mask = attn_bias
 
         # Check if there is a compatible device for flash attention
 
         config = self.cuda_config if is_cuda else self.cpu_config
 
-        causal = self.causal
-
-        # handle attention bias
-
-        if exists(attn_bias):
-            mask_value = -torch.finfo(q.dtype).max // 2
-            causal_mask = self.get_mask(q_len, k_len, device)
-            attn_bias = attn_bias.masked_fill(causal_mask, mask_value)
-
-            if exists(mask):
-                attn_bias = attn_bias.masked_fill(~mask, mask_value)
-
-            mask = attn_bias
-            causal = False
-
         # pytorch 2.0 flash attn: q, k, v, mask, dropout, causal, softmax_scale
-
+        
         with torch.backends.cuda.sdp_kernel(**config._asdict()):
             out = F.scaled_dot_product_attention(
                 q, k, v,
@@ -115,7 +160,7 @@ class FlashAttention(nn.Module):
                 is_causal = causal
             )
 
-        return out
+            return out
 
     def forward(self, q, k, v, mask = None, attn_bias = None):
         """
@@ -160,63 +205,33 @@ class FlashAttention(nn.Module):
         out = einsum(f"b h i j, {kv_einsum_eq} -> b h i d", attn, v)
 
         return out
+    
+import torch
+from collections import namedtuple
+from einops import rearrange
+
+EfficientAttentionConfig = namedtuple('EfficientAttentionConfig', ['enable_flash', 'enable_math', 'enable_mem_efficient'])
 
 class FlashMHA(nn.Module):
-    def __init__(self, embed_dim, num_heads, dropout=0.0, device=None, dtype=None):
+    def __init__(self, embed_dim, num_heads, bias=True, batch_first=True, dropout=0.0,
+                 causal=False, device=None, dtype=None) -> None:
+        assert batch_first
+        factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
         self.embed_dim = embed_dim
+        self.causal = causal
+
         self.num_heads = num_heads
-        self.head_dim = embed_dim // num_heads
-        self.scaling = self.head_dim**-0.5
+        assert self.embed_dim % num_heads == 0, "self.kdim must be divisible by num_heads"
+        self.head_dim = self.embed_dim // num_heads
+        assert self.head_dim % 8 == 0 and self.head_dim <= 128, "Only support head_dim <= 128 and divisible by 8"
 
-        factory_kwargs = {'device': device, 'dtype': dtype}
+        self.Wqkv = nn.Linear(embed_dim, 3 * embed_dim, bias=bias, **factory_kwargs)
+        self.inner_attn = FlashAttention(dropout=dropout, causal=causal)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias, **factory_kwargs)
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=True, **factory_kwargs)
-        
-        self.dropout_module = nn.Dropout(dropout).to(device=device, dtype=dtype)
-
-        # Init flash attention
-        self.flash_attention = FlashAttention(dropout=dropout, heads=num_heads, dropout=dropout, device=device, dtype=dtype)
-    
-    def forward(
-            self,
-            query,
-            key,
-            value,
-            mask=None,
-            attn_mask=None,
-            incremental_state=None,
-            is_first_step=False
-        ):
-        tgt_len, bsz, embed_dim = query.size()
-
-        assert embed_dim == self.embed_dim
-        assert list(query.size()) == [tgt_len, bsz, embed_dim]
-
-        q = self.q_proj(query)
-        k = self.k_proj(key)
-        v = self.v_proj(value)
-
-        q *= self.scaling
-
-        q = q.view(tgt_len, bsz * self.num_heads, self.head_dim).transpose(0, 1)
-        k = k.view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)
-        v = v.view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)
-
-        if mask is not None:
-            mask = mask.unsqueeze(1).expand(-1, tgt_len, -1)
-            mask = mask.view(mask.size(0) * self.num_heads, tgt_len, -1)
-        
-        attn_weights, _ = self.flash_attention(q, k, v, mask)
-        assert list(attn_weights.size()) == [bsz * self.num_heads, tgt_len, k.size(1)]
-
-        attn_weights = self.dropout_module(attn_weights)
-        attn = torch.bmm(attn_weights, v)
-        assert list(attn.size()) == [bsz * self.num_heads, tgt_len, self.head_dim]
-        attn = attn.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
-        attn = self.out_proj(attn)
-
-        return attn, attn_weights
+    def forward(self, query, key, value):
+        qkv = self.Wqkv(query)
+        q, k, v = rearrange(qkv, 'b s (three h d) -> three b s h d', three=3, h=self.num_heads, d=self.head_dim).unbind(dim=0)
+        context = self.inner_attn(q, k, v)
+        return self.out_proj(rearrange(context, 'b s h d -> b s (h d)'))

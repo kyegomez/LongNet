@@ -5,14 +5,12 @@ import torch.nn.functional as F
 from torchscale.component.xpos_relative_position import XPOS
 from torchscale.component.relative_position_bias import RelativePositionBias
 
-
-from LongNet.attend import FlashMHA
+# from LongNet.attend import FlashMHA
+from flash_attn.flash_attn.flash_attention import FlashMHA
 
 # Replace this with your correct GPU device
 device = "cuda:0"
 dtype=torch.float16
-
-
 
 
 #second iteration the weighted sum of the different dilated + offsets for the different heads
@@ -83,37 +81,23 @@ class DilatedAttention(nn.Module):
 
 
 
-
-
-
-
-class LongNetTransformer(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rates, segment_sizes):
-        super(LongNetTransformer, self).__init__()
-        assert len(dilation_rates) == len(segment_sizes), "dilation_rates and segment_sizes should have the same length"
-
+class MultiModalDilationAttention(nn.Module):
+    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, num_modalities=2):
+        super(MultiModalDilationAttention, self).__init__()
 
         self.d_model = d_model
-        self.num_heads = num_heads
-        self.dilation_rates = dilation_rates
-        self.segment_sizes = segment_sizes
-        
-        self.dilated_attention_layers = nn.ModuleList(
-            [DilatedAttention(d_model, num_heads, dilation_rate, segment_size)]
-            for dilation_rate, segment_size in zip(dilation_rates, segment_sizes)
+        self.num_modalities = num_modalities
+        self.dilated_attns = nn.ModuleList(
+            [DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, casual) for _ in range(num_modalities)]
         )
+        self.cross_modality_attn = DilatedAttention(num_modalities * d_model, num_heads, dilation_rate, segment_size, dropout, casual)
 
     def forward(self, x):
-        #accumlate outputs from different layers
-        outputs = []
+        modality_outputs = []
+        for modality_data, attn in zip(x, self.dilated_attns):
+            modality_outputs.append(attn(modality_data))
+        
+        cross_modality_input = torch.cat(modality_outputs, dim=-1)
+        cross_modality_output = self.cross_modality_attn_(cross_modality_input)
 
-        #process each dilated attention layer
-        for i in range(len(self.dilated_attention_layers)):
-            output = self.dilated_attention_layers[i](x)
-            outputs.append(output)
-
-        #combine the outputs
-        output = torch.sum(torch.stack(outputs), dim=0)
-
-        return output
-    
+        return cross_modality_output
