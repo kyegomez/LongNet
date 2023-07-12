@@ -13,7 +13,7 @@ device = "cuda:0"
 dtype=torch.float16
 
 
-
+#
 
 #second iteration the weighted sum of the different dilated + offsets for the different heads
 class DilatedAttention(nn.Module):
