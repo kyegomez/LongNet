@@ -72,9 +72,19 @@ class DilatedAttention(nn.Module):
             # Apply offset and segment for this head
             x_ = x[:, offset::self.dilation_rate, :]
             x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
+            
 
-            # Pass through attention
-            attn_output, _ = attention(x_, x_, x_)
+            
+            elements_attns = []
+
+            for idx in range(x_.shape[1]):
+                element      = x_[:, idx, :, :].to(dtype)
+                element_attn = attention(element, element, element)
+
+                elements_attns.append(element_attn)
+
+            attn_output = torch.cat(elements_attns, dim=1)
+
             
             # If using relative positional bias, add it
             if self.use_rel_pos_bias:
