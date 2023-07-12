@@ -179,7 +179,7 @@ class FlashMHA(nn.Module):
         self.dropout_module = nn.Dropout(dropout).to(device=device, dtype=dtype)
 
         # Init flash attention
-        self.flash_attention = FlashAttention(dropout=dropout, heads=num_heads, dropout=dropout, device=device, dtype=dtype)
+        self.flash_attention = FlashAttention(dropout=dropout, heads=num_heads, device=device, dtype=dtype)
     
     def forward(
             self,
