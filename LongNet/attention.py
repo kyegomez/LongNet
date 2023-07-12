@@ -92,7 +92,6 @@ class DilatedAttention(nn.Module):
 
             
             elements_attns = []
-
             for idx in range(x_.shape[1]):
                 element      = x_[:, idx, :, :].to(dtype)
                 element_attn = attention(element, element, element)
@@ -100,6 +99,12 @@ class DilatedAttention(nn.Module):
                 elements_attns.append(element_attn)
 
             attn_output = torch.cat(elements_attns, dim=1)
+
+
+            #option2
+            # elements_attns = [attention(element.to(dtype), element.to(dtype), element.to(dtype)) for element in x_]
+            # attn_output = torch.cat(elements_attns, dim=1)
+
 
             
             # If using relative positional bias, add it
@@ -131,11 +136,6 @@ class DilatedAttention(nn.Module):
         return outputs_weighted
 
 
-
-
-# elements_attns = [attention(element.to(dtype), element.to(dtype), element.to(dtype)) for element in x_]
-
-# attn_output = torch.cat(elements_attns, dim=1)
 
 
 
