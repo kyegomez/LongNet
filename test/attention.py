@@ -111,6 +111,37 @@ class TestDilatedAttention(unittest.TestCase):
         _, attn_weights = dilated_attention(input_tensor)
         
         self.assertTrue(torch.allclose(attn_weights.sum(dim=-1), torch.tensor(1.)))
+
+        def setUp(self):
+            self.d_model = 128
+            self.num_heads = 4
+            self.dilation_rate = 2
+            self.segment_size = 32
+            self.dropout = 0.1
+            self.casual = False
+            self.use_xpos = False
+            self.use_rel_pos_bias = False
+
+            self.batch_size = 10
+            self.seq_len = 100
+
+            self.x = torch.rand(self.batch_size, self.seq_len, self.d_model)
+
+            self.sparse_dilated_attention = DilatedAttention(self.d_model, self.num_heads, self.dilation_rate, self.segment_size, self.dropout, self.casual, self.use_xpos, self.use_rel_pos_bias)
+
+    def test_forward_pass(self):
+        output = self.sparse_dilated_attention(self.x)
+        self.assertEqual(output.size(), (self.batch_size, self.seq_len, self.d_model))
+
+    def test_attention_outputs(self):
+        output = self.sparse_dilated_attention(self.x)
+        self.assertTrue(torch.all(output >= 0))
+        self.assertTrue(torch.all(output <= 1))
+
+    def test_dropout(self):
+        self.sparse_dilated_attention.dropout.p = 1.0
+        output = self.sparse_dilated_attention(self.x)
+        self.assertTrue(torch.all(output == 0))
     
 
 

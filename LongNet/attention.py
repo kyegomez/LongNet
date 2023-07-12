@@ -1,6 +1,7 @@
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.parallel import DataParallel
 
 from LongNet.utils import XPOS, RelativePositionBias
 
@@ -13,29 +14,43 @@ dtype=torch.float16
 
 # Define the attention module
 class DilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
+    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False, Distributed=False):
         super(DilatedAttention, self).__init__()
+
+        #checking put parameter types
+        assert isinstance(d_model, int) and d_model > 0, 'd_model should be positive integer'
+        assert isinstance(num_heads, int) and num_heads > 0, 'num_heads should be positive integer'
+        assert isinstance(dilation_rate, int) and dilation_rate > 0, 'dilation_rate should be a positive integer'
+        
+        assert isinstance(segment_size, int) and segment_size > 0, 'segment_size should be a positive integer'
+        assert isinstance(dropout, float) and 0.0 <= dropout <= 1.0, 'dropout should be a positive integer'
+        assert isinstance(casual, bool), 'casual should be a boolean value'
+
+        assert isinstance(use_xpos, bool), 'use_xpos should be a boolean value '
+        assert isinstance(use_rel_pos_bias, bool), 'use_rel_pos_bias should be a boolean value'
         
         # Initialize parameters
         self.d_model = d_model               # model dimension
         self.num_heads = num_heads           # number of attention heads
         self.dilation_rate = dilation_rate   # dilation rate
         self.segment_size = segment_size     # segment size
-
-        # Initialize attention for each head with dilation
-        self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype) for _ in range(self.dilation_rate)])
-
-        # Initialize dropout layer
-        self.dropout = nn.Dropout(dropout)
         
+        self.dropout = nn.Dropout(dropout)
         # If casual attention is used
         self.casual = casual
-
         # If using positional encoding
         self.use_xpos = use_xpos
-
         # If using relative positional bias
         self.use_rel_pos_bias = use_rel_pos_bias
+        self.distributed = Distributed
+
+        # Initialize attention for each head with dilation
+        # Initialize the attention heads with or without DataParallel based on the value of 'distributed'
+        if self.distributed:
+            self.attentions = nn.ModuleList([DataParallel(FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype)) for _ in range(self.dilation_rate)])
+        else:
+            self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype) for _ in range(self.dilation_rate)])
+
 
         # If using positional encoding, initialize it
         if use_xpos:
@@ -73,19 +88,9 @@ class DilatedAttention(nn.Module):
             x_ = x[:, offset::self.dilation_rate, :]
             x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
             
-
-            
-            elements_attns = []
-
-            for idx in range(x_.shape[1]):
-                element      = x_[:, idx, :, :].to(dtype)
-                element_attn = attention(element, element, element)
-
-                elements_attns.append(element_attn)
-
+            elements_attns = [attention(element.to(dtype), element.to(dtype), element.to(dtype)) for element in x_]
             attn_output = torch.cat(elements_attns, dim=1)
 
-            
             # If using relative positional bias, add it
             if self.use_rel_pos_bias:
                 attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
