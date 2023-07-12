@@ -311,6 +311,8 @@ Thank you for sharing!
 
 * Recreate in Triton or Jax for ultra mega speed boost
 
+* Integrate [Dynamic sparse flash attention](https://github.com/epfml/dynamic-sparse-flash-attention/blob/main/runtime-experiments/timeperf-hash-and-qk-sparse.ipynb) with DilatedAttention
+
 
 ## Citation
 ```
