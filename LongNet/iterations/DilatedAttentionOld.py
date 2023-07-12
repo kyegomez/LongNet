@@ -3,11 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torchscale.component.xpos_relative_position import XPOS
-from torchscale.component.relative_position_bias import RelativePositionBias
-
-# from LongNet.attend import FlashMHA
-from flash_attn.flash_attn.flash_attention import FlashMHA
+from LongNet.utils import XPOS, RelativePositionBias
+from LongNet.attention import FlashMHA
 
 # Replace this with your correct GPU device
 device = "cuda:0"
@@ -41,7 +38,7 @@ class DilatedAttentionold(nn.Module):
         This will return the output tensor after applying dilated attention. The `use_xpos` and `use_rel_pos_bias` parameters allow for switching on positional encoding and relative positional bias respectively.
     """
     def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
-        super(DilatedAttention, self).__init__()
+        super(DilatedAttentionold, self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
 

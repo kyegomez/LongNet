@@ -1,12 +1,10 @@
+
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torchscale.component.xpos_relative_position import XPOS
-from torchscale.component.relative_position_bias import RelativePositionBias
-
-# from LongNet.attend import FlashMHA
-from flash_attn.flash_attn.flash_attention import FlashMHA
+from LongNet.utils import XPOS, RelativePositionBias
+from LongNet.attention import FlashMHA
 
 # Replace this with your correct GPU device
 device = "cuda:0"
@@ -14,17 +12,18 @@ dtype=torch.float16
 
 
 
-class DynamicDilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, num_rates, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
-        super(DynamicDilatedAttention, self).__init__()
+
+
+class DilatedAttentionOP(nn.Module):
+    def __init__(self, d_model, num_heads, dilation_rates, segment_sizes, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
+        super(DilatedAttentionOP, self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
 
-        # Generate geometric sequences for dilation rates and segment sizes
-        self.dilation_rates = torch.logspace(start=0, end=num_rates-1, steps=num_rates, base=2, dtype=torch.int, device=device)
-        self.segment_sizes = torch.logspace(start=0, end=num_rates-1, steps=num_rates, base=2, dtype=torch.int, device=device)
+        self.dilation_rates = dilation_rates
+        self.segment_sizes = segment_sizes
 
-        self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype) for _ in range(num_rates)])
+        self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype) for _ in range(len(dilation_rates))])
         self.dropout = nn.Dropout(dropout)
         self.casual = casual
 
@@ -49,7 +48,6 @@ class DynamicDilatedAttention(nn.Module):
 
         #collect outputs from each attention head
         all_head_outputs = []
-        all_softmax_denominators = []
         for head_idx, attention in enumerate(self.attentions):
             dilation_rate = self.dilation_rates[head_idx]
             segment_size = self.segment_sizes[head_idx]
@@ -58,11 +56,20 @@ class DynamicDilatedAttention(nn.Module):
                 x_ = x[:, offset::dilation_rate, :]  # Apply offset for each head
                 x_ = x_.contiguous().view(batch_size, -1, segment_size, self.d_model)
 
-                attn_output, attn_weights = attention(x_, x_, x_)
+                elements_attns = []
+                
+                for idx in range(x_.shape[1]):
+                    element         = x_[:, idx, :, :].to(dtype)
+                    element_attn, _ = attention(element, element, element)
+
+                    elements_attns.append(element_attn)
+
+                attn_output = torch.cat(elements_attns, dim=1)
+
                 if self.use_rel_pos_bias:
                     attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
 
-                if self.casual:
+                if self.casual: # TODO: Look into it
                     mask = self.get_mask(attn_output.size(1), attn_output.size(1))
                     attn_output = attn_output.masked_fill(mask, float('-inf'))
 
@@ -73,13 +80,11 @@ class DynamicDilatedAttention(nn.Module):
                 attn_output_resized[:, offset::dilation_rate, :] = attn_output.contiguous().view(batch_size, -1, self.d_model)
                 
                 all_head_outputs.append(attn_output_resized)
-                all_softmax_denominators.append(attn_weights.sum(dim=-1))
 
         #calculate the weights for the different dilated attentions
-        weights = self.softmax(torch.stack(all_softmax_denominators, dim=-1))
+        weights = self.softmax(torch.tensor([1.0 / len(self.dilation_rates) for _ in range(len(self.dilation_rates))], device=device, dtype=dtype))
 
         #apply the weights to the outputs of the different heads
-        outputs_weighted = sum(w.unsqueeze(-1) * out for w, out in zip(weights, all_head_outputs))
+        outputs_weighted = sum(w * out for w, out in zip(weights, all_head_outputs))
 
         return outputs_weighted
-    

@@ -2,11 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torchscale.torchscale.component.xpos_relative_position import XPOS
-from torchscale.torchscale.component.relative_position_bias import RelativePositionBias
+from LongNet.utils import XPOS, RelativePositionBias
+from LongNet.attention import FlashMHA
 
-
-from LongNet.attend import FlashMHA
 
 # Replace this with your correct GPU device
 device = "cuda:0"
