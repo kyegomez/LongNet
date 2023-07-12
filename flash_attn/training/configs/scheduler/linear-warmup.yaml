@@ -1,2 +1,0 @@
-# @package train.scheduler
-_target_: transformers.get_linear_schedule_with_warmup

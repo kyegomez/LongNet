@@ -1,2 +1,0 @@
-# @package train.scheduler
-_target_: torch.optim.lr_scheduler.MultiStepLR

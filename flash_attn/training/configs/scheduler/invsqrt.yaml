@@ -1,3 +1,0 @@
-# @package train.scheduler
-_target_: src.optim.lr_scheduler.InvSqrt
-num_warmup_steps: ???

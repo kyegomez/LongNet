@@ -1,3 +1,0 @@
-# @package train.optimizer
-_target_: apex.optimizers.FusedAdam
-adam_w_mode: True

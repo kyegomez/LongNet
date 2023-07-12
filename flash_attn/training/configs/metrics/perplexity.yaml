@@ -1,3 +1,0 @@
-# @package eval.metrics
-ppl:
-  _target_: src.metrics.perplexity.Perplexity

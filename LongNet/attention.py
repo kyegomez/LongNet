@@ -2,19 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# from torchscale.component.xpos_relative_position import XPOS
-# from torchscale.component.relative_position_bias import RelativePositionBias
-
-from torchscale import XPOS, RelativePositionBias
+from LongNet.utils import XPOS, RelativePositionBias
 
 from LongNet.attend import FlashMHA
 
-# Replace this with your correct GPU device
 device = "cuda:0"
 dtype=torch.float16
 
-
-#
 
 
 # Define the attention module

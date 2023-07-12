@@ -1,3 +1,0 @@
-# @package train.scheduler
-_target_: torch.optim.lr_scheduler.StepLR
-step_size: ???

@@ -1,3 +1,0 @@
-# @package eval.metrics
-mse:
-  _target_: torchmetrics.MeanSquaredError
