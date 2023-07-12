@@ -15,69 +15,98 @@ dtype=torch.float16
 
 #
 
-#second iteration the weighted sum of the different dilated + offsets for the different heads
+
+# Define the attention module
 class DilatedAttention(nn.Module):
     def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
         super(DilatedAttention, self).__init__()
-        self.d_model = d_model
-        self.num_heads = num_heads
+        
+        # Initialize parameters
+        self.d_model = d_model               # model dimension
+        self.num_heads = num_heads           # number of attention heads
+        self.dilation_rate = dilation_rate   # dilation rate
+        self.segment_size = segment_size     # segment size
 
-        self.dilation_rate = dilation_rate
-        self.segment_size = segment_size
-
+        # Initialize attention for each head with dilation
         self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype) for _ in range(self.dilation_rate)])
+
+        # Initialize dropout layer
         self.dropout = nn.Dropout(dropout)
+        
+        # If casual attention is used
         self.casual = casual
 
+        # If using positional encoding
         self.use_xpos = use_xpos
+
+        # If using relative positional bias
         self.use_rel_pos_bias = use_rel_pos_bias
 
+        # If using positional encoding, initialize it
         if use_xpos:
             self.xpos = XPOS(head_dim=d_model//num_heads)
+
+        # If using relative positional bias, initialize it
         if use_rel_pos_bias:
             self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=num_heads)
 
+        # Initialize softmax for later use in weights
         self.softmax = nn.Softmax(dim=-1)
 
+    # Function to get mask for casual attention
     def get_mask(self, i, j):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
 
+    # Forward function
     def forward(self, x):
+        # Get batch size, sequence length and model dimension
         batch_size, seq_len, _ = x.shape
 
+        # If using positional encoding, add it
         if self.use_xpos:
             x = self.xpos(x)
 
-        #collect outputs from each attention head
+        # Initialize list to store outputs from each attention head
         all_head_outputs = []
+        
+        # For each attention head
         for head_idx, attention in enumerate(self.attentions):
+            # Calculate offset for this head
             offset = head_idx % self.dilation_rate
 
-            x_ = x[:, offset::self.dilation_rate, :]  # Apply offset for each head
+            # Apply offset and segment for this head
+            x_ = x[:, offset::self.dilation_rate, :]
             x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
 
+            # Pass through attention
             attn_output, _ = attention(x_, x_, x_)
+            
+            # If using relative positional bias, add it
             if self.use_rel_pos_bias:
                 attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
 
+            # If using casual attention, apply mask
             if self.casual:
                 mask = self.get_mask(attn_output.size(1), attn_output.size(1))
                 attn_output = attn_output.masked_fill(mask, float('-inf'))
 
+            # Apply dropout
             attn_output = self.dropout(attn_output)
 
-            #resize back to original size
+            # Resize back to original size
             attn_output_resized = torch.zeros((batch_size, seq_len, self.d_model), device=device, dtype=dtype)
             attn_output_resized[:, offset::self.dilation_rate, :] = attn_output.contiguous().view(batch_size, -1, self.d_model)
             
+            # Append output to list of all outputs
             all_head_outputs.append(attn_output_resized)
 
-        #calculate the weights for the different dilated attentions
+        # Calculate the weights for the different dilated attentions
         weights = self.softmax(torch.tensor([1.0 / self.dilation_rate for _ in range(self.dilation_rate)], device=device, dtype=dtype))
 
-        #apply the weights to the outputs of the different heads
+        # Apply the weights to the outputs of the different heads
         outputs_weighted = sum(w * out for w, out in zip(weights, all_head_outputs))
 
+        # Return the weighted outputs
         return outputs_weighted
 
 
