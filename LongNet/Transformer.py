@@ -174,7 +174,6 @@ class Transformer(nn.Module):
 
 
 class LongNet(nn.Module):
-
     @beartype
     def __init__(
         self,
@@ -191,7 +190,13 @@ class LongNet(nn.Module):
         pad_id = 0,
         rel_pos = False,
         pos_emb = False,
-        flash_attn = False
+        flash_attn = False,
+        dilation_rate = 1,  # added
+        segment_size = 0,  # added
+        casual = False,  # added
+        use_xpos = False,  # added
+        use_rel_pos_bias = False,  # added
+        distributed = False,  # added
     ):
         super().__init__()
 
@@ -242,6 +247,12 @@ class LongNet(nn.Module):
                 attn_dropout = attn_dropout,
                 ff_dropout = ff_dropout,
                 ff_mult = ff_mult,
+                dilation_rate = dilation_rate,  # added
+                segment_size = segment_size,  # added
+                casual = casual,  # added
+                use_xpos = use_xpos,  # added
+                use_rel_pos_bias = use_rel_pos_bias,  # added
+                distributed = distributed,  # added
                 rel_pos = rel_pos,
                 flash_attn = flash_attn
             ))
