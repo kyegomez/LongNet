@@ -1,6 +1,5 @@
 torch
 einops
-flash-attn
 
 accelerate
 bitsandbytes
