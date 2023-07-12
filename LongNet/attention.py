@@ -67,6 +67,7 @@ class DilatedAttention(nn.Module):
     def get_mask(self, i, j):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
 
+
     # Forward function
     def forward(self, x):
         # Get batch size, sequence length and model dimension
@@ -88,9 +89,19 @@ class DilatedAttention(nn.Module):
             x_ = x[:, offset::self.dilation_rate, :]
             x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
             
-            elements_attns = [attention(element.to(dtype), element.to(dtype), element.to(dtype)) for element in x_]
+
+            
+            elements_attns = []
+
+            for idx in range(x_.shape[1]):
+                element      = x_[:, idx, :, :].to(dtype)
+                element_attn = attention(element, element, element)
+
+                elements_attns.append(element_attn)
+
             attn_output = torch.cat(elements_attns, dim=1)
 
+            
             # If using relative positional bias, add it
             if self.use_rel_pos_bias:
                 attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
@@ -120,6 +131,11 @@ class DilatedAttention(nn.Module):
         return outputs_weighted
 
 
+
+
+# elements_attns = [attention(element.to(dtype), element.to(dtype), element.to(dtype)) for element in x_]
+
+# attn_output = torch.cat(elements_attns, dim=1)
 
 
 
