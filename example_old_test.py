@@ -1,7 +1,11 @@
 import timeit
 import torch
-from LongNet.iterations.DilatedAttentionOld import DilatedAttentionold as DilatedAttention
 import time
+
+from LongNet.iterations.DilatedAttentionOld import DilatedAttentionold as DilatedAttention
+import matplotlib.pyplot as plt
+
+
 
 # Define sequence lengths to test
 seq_lengths = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 64000]
@@ -17,6 +21,9 @@ attention = DilatedAttention(d_model=d_model, num_heads=8, dilation_rate=2, segm
 
 # Move the model to GPU
 attention.to(device)
+
+# Prepare a list to store times
+times = []
 
 # Benchmark each sequence length
 for seq_len in seq_lengths:
@@ -36,4 +43,16 @@ for seq_len in seq_lengths:
     # Calculate average forward pass time
     avg_time = (end_time - start_time) / 100
 
+    # Store the time
+    times.append(avg_time)
+
     print(f"Sequence length: {seq_len}, Average forward pass time: {avg_time} seconds")
+
+# Plot the results
+plt.figure(figsize=(10, 6))
+plt.plot(seq_lengths, times, marker='o')
+plt.title('Average forward pass time for different sequence lengths')
+plt.xlabel('Sequence length')
+plt.ylabel('Average forward pass time (seconds)')
+plt.grid(True)
+plt.show()
