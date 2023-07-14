@@ -67,7 +67,6 @@ class DilatedAttention(nn.Module):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
 
 
-    # Forward function
     def forward(self, x):
         # Get batch size, sequence length and model dimension
         batch_size, seq_len, _ = x.shape
@@ -86,17 +85,17 @@ class DilatedAttention(nn.Module):
 
             # Apply offset and segment for this head
             x_ = x[:, offset::self.dilation_rate, :]
-            x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
-            
+            x_ = x_.contiguous().view(batch_size, 1, -1, self.segment_size, self.d_model)  # Add an extra dimension for the number of heads
 
-            
+            # Process each segment separately
             elements_attns = []
-            for idx in range(x_.shape[1]):
-                element = x_[:, idx, :, :].to(dtype)
+            for idx in range(x_.shape[2]):
+                element = x_[:, :, idx, :, :].to(dtype)
                 element_attn = attention(element, element, element)
                 elements_attns.append(element_attn)
 
-            attn_output = torch.cat(elements_attns, dim=1)
+            attn_output = torch.cat(elements_attns, dim=2)
+
 
 
             #option2
