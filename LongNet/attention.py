@@ -99,13 +99,10 @@ class DilatedAttention(nn.Module):
 
             # Process each segment separately
             elements_attns = []
-            for idx in range(x_.shape[2]):
-                element = x_[:, :, idx, :, :].to(dtype)
+            for idx in range(x_.shape[1]):
+                element = x_[:, idx, :, :].to(dtype)
                 element_attn = attention(element, element, element)
                 elements_attns.append(element_attn)
-
-            attn_output = torch.cat(elements_attns, dim=2)
-
             #option2
             # elements_attns = [attention(element.to(dtype), element.to(dtype), element.to(dtype)) for element in x_]
             # attn_output = torch.cat(elements_attns, dim=1)
