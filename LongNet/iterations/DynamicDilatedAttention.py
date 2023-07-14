@@ -60,7 +60,7 @@ class DynamicDilatedAttention(nn.Module):
                 x_ = x_.contiguous().view(batch_size, -1, segment_size, self.d_model)
 
                 attn_output, attn_weights, *_ = attention(x_, x_, x_)  # Collect all additional return values into a list
-                
+
                 if self.use_rel_pos_bias:
                     attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
 
@@ -70,11 +70,11 @@ class DynamicDilatedAttention(nn.Module):
 
                 attn_output = self.dropout(attn_output)
 
-                # Add output to the corresponding positions in the outputs tensor
-                outputs[:, offset::dilation_rate, :] += attn_output.contiguous().view(batch_size, -1, self.d_model)
+                    # Add output to the corresponding positions in the outputs tensor
+                outputs[:, offset::dilation_rate, :attn_output.shape[1]*dilation_rate] += attn_output.contiguous().view(batch_size, -1, self.d_model)
                 
                 # Add softmax denominators to the corresponding positions in the softmax_denominators tensor
-                softmax_denominators[:, offset::dilation_rate, :] += attn_weights.sum(dim=-1)
+                softmax_denominators[:, offset::dilation_rate, :attn_output.shape[1]*dilation_rate] += attn_weights.sum(dim=-1)
 
         # Calculate the weights for the different dilated attentions
         weights = self.softmax(softmax_denominators)
@@ -83,5 +83,3 @@ class DynamicDilatedAttention(nn.Module):
         outputs_weighted = weights * outputs
 
         return outputs_weighted
-
-
