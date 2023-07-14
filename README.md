@@ -24,7 +24,7 @@ Experiment results demonstrate that LongNet yields strong performance on both lo
 Here's the updated usage and installation section with two methods: git clone or pip install LongNet:
 
 ## Installation
-c
+
 You can install LongNet using one of the following methods:
 
 ### Method 1: Git Clone
@@ -99,8 +99,12 @@ outputs = attention(inputs)
 print(outputs.shape)  # Expected: [batch_size, seq_len, d_model]
 ```
 
+# Documentation
+
+* [Click here for the model documentation](docs/DOCUMENTATION.md)
+
 # Training the Model
-There are 2 methods, one is `accelerate` and the other `from LongNet import Train`
+* We're still working on the model configuation as closely in the paper as possible. There are 2 methods, one is `accelerate` and the other `from LongNet import Train`
 
 ### Method 1 
 
