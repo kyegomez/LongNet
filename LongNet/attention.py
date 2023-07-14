@@ -85,7 +85,7 @@ class DilatedAttention(nn.Module):
 
             # Apply offset and segment for this head
             x_ = x[:, offset::self.dilation_rate, :]
-            x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
+            x_ = x_.contiguous().view(batch_size, 1, -1, self.segment_size, self.d_model)  # Add an extra dimension for the number of heads
 
             # Process each segment separately
             elements_attns = []
