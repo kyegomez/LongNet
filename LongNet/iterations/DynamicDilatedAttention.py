@@ -23,7 +23,7 @@ class DynamicDilatedAttention(nn.Module):
         self.dilation_rates = torch.logspace(start=0, end=num_rates-1, steps=num_rates, base=2, dtype=torch.int, device=device)
         self.segment_sizes = torch.logspace(start=0, end=num_rates-1, steps=num_rates, base=2, dtype=torch.int, device=device)
 
-        self.attention = FlashAttention(causal=self.casual, dropout=dropout).to(device)  # Corrected here
+        self.attention = [FlashAttention(causal=self.casual, dropout=dropout).to(device) for _ in range(num_rates)] # Corrected here]
         self.dropout = nn.Dropout(dropout)
 
         self.use_xpos = use_xpos
