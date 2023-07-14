@@ -13,7 +13,7 @@ dtype=torch.float16
 
 
 class DynamicDilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, num_rates, dropout=0.0, causal=False, use_xpos=False, use_rel_pos_bias=False):
+    def __init__(self, d_model, num_heads, num_rates, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
         super(DynamicDilatedAttention, self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
@@ -22,9 +22,9 @@ class DynamicDilatedAttention(nn.Module):
         self.dilation_rates = torch.logspace(start=0, end=num_rates-1, steps=num_rates, base=2, dtype=torch.int, device=device)
         self.segment_sizes = torch.logspace(start=0, end=num_rates-1, steps=num_rates, base=2, dtype=torch.int, device=device)
 
-        self.attention = FlashAttention(causal=self.casual, dropout=dropout).to(device)
+        self.attention = FlashAttention(casual=self.casual, dropout=dropout).to(device)
         self.dropout = nn.Dropout(dropout)
-        self.causal = causal  # Corrected here
+        self.casual = casual  # Corrected here
 
         self.use_xpos = use_xpos
         self.use_rel_pos_bias = use_rel_pos_bias
