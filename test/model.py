@@ -1,7 +1,6 @@
 import torch
 import time
-from ..LongNet.model import DilatedLongNet
-
+from LongNet import DilatedLongNet
 
 # Instantiate the DilatedLongNet model
 model = DilatedLongNet()
