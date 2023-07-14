@@ -40,6 +40,7 @@ class DynamicDilatedAttention(nn.Module):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
 
     def forward(self, x):
+        # Get batch size, sequence length and model dimension
         batch_size, seq_len, _ = x.shape
 
         if self.use_xpos:
@@ -70,7 +71,7 @@ class DynamicDilatedAttention(nn.Module):
 
                 attn_output = self.dropout(attn_output)
 
-                    # Add output to the corresponding positions in the outputs tensor
+                # Add output to the corresponding positions in the outputs tensor
                 outputs[:, offset::dilation_rate, :attn_output.shape[1]*dilation_rate] += attn_output.contiguous().view(batch_size, -1, self.d_model)
                 
                 # Add softmax denominators to the corresponding positions in the softmax_denominators tensor
