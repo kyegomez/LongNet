@@ -97,18 +97,16 @@ class DilatedAttention(nn.Module):
             #reshape the sequence into segments
             x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
 
+            #add an extra idmension for the number of heads
+            x_ = x_.unsqueeze(1)
+
             # Process each segment separately
             elements_attns = []
             for idx in range(x_.shape[1]):
                 element = x_[:, idx, :, :].to(dtype)
                 element_attn = attention(element, element, element)
                 elements_attns.append(element_attn)
-            #option2
-            # elements_attns = [attention(element.to(dtype), element.to(dtype), element.to(dtype)) for element in x_]
-            # attn_output = torch.cat(elements_attns, dim=1)
 
-
-            
             # If using relative positional bias, add it
             if self.use_rel_pos_bias:
                 attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
