@@ -45,9 +45,12 @@ class DynamicDilatedAttention(nn.Module):
         if self.use_xpos:
             x = self.xpos(x)
 
-        #collect outputs from each attention head
-        all_head_outputs = []
-        all_softmax_denominators = []
+        # Initialize tensor to store outputs
+        outputs = torch.zeros((batch_size, seq_len, self.d_model), device=device, dtype=dtype)
+
+        # Initialize tensor to store softmax denominators
+        softmax_denominators = torch.zeros((batch_size, seq_len, self.num_heads), device=device, dtype=dtype)
+
         for head_idx, attention in enumerate(self.attentions):
             dilation_rate = self.dilation_rates[head_idx]
             segment_size = self.segment_sizes[head_idx]
@@ -66,22 +69,18 @@ class DynamicDilatedAttention(nn.Module):
 
                 attn_output = self.dropout(attn_output)
 
-                #resize back to original size
-                attn_output_resized = torch.zeros((batch_size, seq_len, self.d_model), device=device, dtype=dtype)
-                attn_output_resized[:, offset::dilation_rate, :] = attn_output.contiguous().view(batch_size, -1, self.d_model)
+                # Add output to the corresponding positions in the outputs tensor
+                outputs[:, offset::dilation_rate, :] += attn_output.contiguous().view(batch_size, -1, self.d_model)
                 
-                all_head_outputs.append(attn_output_resized)
-                all_softmax_denominators.append(attn_weights.sum(dim=-1))
+                # Add softmax denominators to the corresponding positions in the softmax_denominators tensor
+                softmax_denominators[:, offset::dilation_rate, :] += attn_weights.sum(dim=-1)
 
-        #calculate the weights for the different dilated attentions
-        weights = self.softmax(torch.stack(all_softmax_denominators, dim=-1))
+        # Calculate the weights for the different dilated attentions
+        weights = self.softmax(softmax_denominators)
 
-        #apply the weights to the outputs of the different heads
-        outputs_weighted = sum(w.unsqueeze(-1) * out for w, out in zip(weights, all_head_outputs))
+        # Apply the weights to the outputs
+        outputs_weighted = weights * outputs
 
         return outputs_weighted
-
-
-
 
 
