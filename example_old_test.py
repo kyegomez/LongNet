@@ -4,7 +4,7 @@ from LongNet.iterations.DilatedAttentionOld import DilatedAttentionold as Dilate
 import time
 
 # Define sequence lengths to test
-seq_lengths = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]
+seq_lengths = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 100256]
 
 # Define batch size and feature dimension
 batch_size = 32
