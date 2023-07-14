@@ -5,7 +5,7 @@ from torch.nn.parallel import DataParallel
 
 from LongNet.utils import XPOS, RelativePositionBias
 
-from LongNet.attend import FlashMHA
+from LongNet.attend import FlashAttention
 
 device = "cuda:0"
 dtype=torch.float16
@@ -34,7 +34,6 @@ class DilatedAttention(nn.Module):
         self.num_heads = num_heads           # number of attention heads
         self.dilation_rate = dilation_rate   # dilation rate
         self.segment_size = segment_size     # segment size
-        
         self.dropout = nn.Dropout(dropout)
         # If casual attention is used
         self.casual = casual
@@ -44,13 +43,12 @@ class DilatedAttention(nn.Module):
         self.use_rel_pos_bias = use_rel_pos_bias
         self.distributed = Distributed
 
-        # Initialize attention for each head with dilation
-        # Initialize the attention heads with or without DataParallel based on the value of 'distributed'
-        if self.distributed:
-            self.attentions = nn.ModuleList([DataParallel(FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype)) for _ in range(self.dilation_rate)])
-        else:
-            self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype) for _ in range(self.dilation_rate)])
 
+        # Initialize attention for each head with dilation
+        if self.distributed:
+            self.attentions = nn.ModuleList([DataParallel(FlashAttention(causal=self.casual, dropout=dropout)) for _ in range(self.dilation_rate)])
+        else:
+            self.attentions = nn.ModuleList([FlashAttention(causal=self.casual, dropout=dropout) for _ in range(self.dilation_rate)])
 
         # If using positional encoding, initialize it
         if use_xpos:
@@ -104,8 +102,6 @@ class DilatedAttention(nn.Module):
             #option2
             # elements_attns = [attention(element.to(dtype), element.to(dtype), element.to(dtype)) for element in x_]
             # attn_output = torch.cat(elements_attns, dim=1)
-
-
             
             # If using relative positional bias, add it
             if self.use_rel_pos_bias:
@@ -135,6 +131,11 @@ class DilatedAttention(nn.Module):
         # Return the weighted outputs
         return outputs_weighted
 
+
+
+class MultiHeadDilatedAttention:
+    def __init__():
+        pass
 
 
 

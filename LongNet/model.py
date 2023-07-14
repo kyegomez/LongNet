@@ -91,7 +91,7 @@ class DilatedLongNet(Module):
             distributed = False             # whether to distribute attention for DilatedAttention
         )
 
-    def forward(self, text_tokens, temperature: int = None, filter_thres: int = None, **kwargs):
+    def generate(self, text_tokens, temperature: int = None, filter_thres: int = None, **kwargs):
         sampled = self.model.generate(temperature=temperature, filter_thres=filter_thres)
         return sampled
 
