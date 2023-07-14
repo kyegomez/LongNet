@@ -13,7 +13,7 @@ d_model = 512
 device = 'cuda:0'
 
 # Initialize DynamicDilatedAttention module
-attention = DynamicDilatedAttention(d_model=d_model, num_heads=8, num_rates=4, use_xpos=False, use_rel_pos_bias=False)
+attention = DynamicDilatedAttention(d_model=d_model, num_heads=8, num_rates=4, use_xpos=False, use_rel_pos_bias=False, casual=True)
 attention.to(device)
 
 # Prepare a list to store times
