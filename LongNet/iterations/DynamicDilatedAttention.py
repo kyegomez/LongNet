@@ -13,7 +13,7 @@ dtype=torch.float16
 
 
 class DynamicDilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, num_rates, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
+    def __init__(self, d_model, num_heads, num_rates, dropout=0.0, causal=False, use_xpos=False, use_rel_pos_bias=False):
         super(DynamicDilatedAttention, self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
@@ -24,7 +24,7 @@ class DynamicDilatedAttention(nn.Module):
 
         self.attention = FlashAttention(causal=self.casual, dropout=dropout).to(device)
         self.dropout = nn.Dropout(dropout)
-        self.casual = casual
+        self.causal = causal  # Corrected here
 
         self.use_xpos = use_xpos
         self.use_rel_pos_bias = use_rel_pos_bias
