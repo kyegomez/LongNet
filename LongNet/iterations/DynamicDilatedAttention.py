@@ -59,7 +59,7 @@ class DynamicDilatedAttention(nn.Module):
                 x_ = x[:, offset::dilation_rate, :]  # Apply offset for each head
                 x_ = x_.contiguous().view(batch_size, -1, segment_size, self.d_model)
 
-                attn_output, attn_weights, _  = attention(x_, x_, x_)
+                attn_output, attn_weights, *_ = attention(x_, x_, x_)  # Collect all additional return values into a list
                 if self.use_rel_pos_bias:
                     attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
 
