@@ -51,7 +51,7 @@ class DynamicDilatedAttention(nn.Module):
         # Initialize tensor to store softmax denominators
         softmax_denominators = torch.zeros((batch_size, seq_len, self.num_heads), device=device, dtype=dtype)
 
-        for head_idx, attention in enumerate(self.attentions):
+        for head_idx, attention in enumerate(self.attention):
             dilation_rate = self.dilation_rates[head_idx]
             segment_size = self.segment_sizes[head_idx]
 
