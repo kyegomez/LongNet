@@ -41,19 +41,7 @@ git clone https://github.com/kyegomez/LongNet.git
 cd LongNet
 ```
 
-3. Prepare `flash_attn` library
-
-```bash
-
-cd flash_attn
-
-python setup.py install
-
-cd ..
-
-```
-
-4. Install the required dependencies:
+3. Install the required dependencies:
 
 ```shell
 pip install -r requirements.txt
