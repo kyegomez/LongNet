@@ -38,7 +38,8 @@ class DynamicDilatedAttention(nn.Module):
 
     def get_mask(self, i, j):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
-
+    
+    #
     def forward(self, x):
         # Get batch size, sequence length and model dimension
         batch_size, seq_len, _ = x.shape
