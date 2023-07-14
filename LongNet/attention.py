@@ -5,7 +5,7 @@ from torch.nn.parallel import DataParallel
 
 from LongNet.utils import XPOS, RelativePositionBias
 
-from LongNet.attend import FlashMHA
+from LongNet.attend import FlashAttention
 
 device = "cuda:0"
 dtype=torch.float16
@@ -46,9 +46,9 @@ class DilatedAttention(nn.Module):
 
         # Initialize the attention heads with or without DataParallel based on the value of 'distributed'
         if self.distributed:
-            self.attentions = nn.ModuleList([DataParallel(FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype)) for _ in range(self.dilation_rate)])
+            self.attentions = nn.ModuleList([DataParallel(FlashAttention(causal=self.casual, dropout=dropout).to(device)) for _ in range(self.dilation_rate)])
         else:
-            self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype) for _ in range(self.dilation_rate)])
+            self.attentions = nn.ModuleList([FlashAttention(causal=self.casual, dropout=dropout).to(device) for _ in range(self.dilation_rate)])
 
 
         # If using positional encoding, initialize it
