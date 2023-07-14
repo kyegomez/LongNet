@@ -82,7 +82,7 @@ class DynamicDilatedAttention(nn.Module):
                 # Add softmax denominators to the corresponding positions in the softmax_denominators tensor
                 softmax_denominators[:, offset::dilation_rate, :attn_output.shape[1]*dilation_rate] += attn_weights.sum(dim=-1)
 
-        # Calculate the weights for the different dilated attentions #
+        # Calculate the weights for the different dilated attentions
         weights = self.softmax(softmax_denominators)
 
         # Apply the weights to the outputs
