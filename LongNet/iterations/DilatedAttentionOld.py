@@ -90,5 +90,5 @@ class DilatedAttentionold(nn.Module):
         attn_output = self.dropout(attn_output)
 
         # Scatter and concatenate 
-        attn_output = attn_output.view(batch_size, -1, self.d_model)
+        attn_output = attn_output.reshape(batch_size, -1, self.d_model)
         return attn_output
