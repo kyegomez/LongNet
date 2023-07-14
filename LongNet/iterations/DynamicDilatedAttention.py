@@ -39,16 +39,17 @@ class DynamicDilatedAttention(nn.Module):
     def get_mask(self, i, j):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
     
-    #
     def forward(self, x):
         # Get batch size, sequence length and model dimension
         batch_size, seq_len, _ = x.shape
+        print(f'x.shape: {x.shape}')  # Print the shape of the input tensor
 
         if self.use_xpos:
             x = self.xpos(x)
 
         # Initialize tensor to store outputs
         outputs = torch.zeros((batch_size, seq_len, self.d_model), device=device, dtype=dtype)
+        print(f'outputs.shape: {outputs.shape}')  # Print the shape of the outputs tensor
 
         # Initialize tensor to store softmax denominators
         softmax_denominators = torch.zeros((batch_size, seq_len, self.num_heads), device=device, dtype=dtype)
@@ -60,8 +61,10 @@ class DynamicDilatedAttention(nn.Module):
             for offset in range(dilation_rate):
                 x_ = x[:, offset::dilation_rate, :]  # Apply offset for each head
                 x_ = x_.contiguous().view(batch_size, -1, segment_size, self.d_model)
+                print(f'x_.shape: {x_.shape}')  # Print the shape of the reshaped input tensor
 
                 attn_output, attn_weights, *_ = attention(x_, x_, x_)  # Collect all additional return values into a list
+                print(f'attn_output.shape: {attn_output.shape}')  # Print the shape of the attention output tensor
 
                 if self.use_rel_pos_bias:
                     attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
@@ -74,7 +77,8 @@ class DynamicDilatedAttention(nn.Module):
 
                 # Add output to the corresponding positions in the outputs tensor
                 outputs[:, offset::dilation_rate, :attn_output.shape[1]*dilation_rate] += attn_output.contiguous().view(batch_size, -1, self.d_model)
-                
+                print(f'outputs.shape after addition: {outputs.shape}')  # Print the shape of the outputs tensor after addition
+
                 # Add softmax denominators to the corresponding positions in the softmax_denominators tensor
                 softmax_denominators[:, offset::dilation_rate, :attn_output.shape[1]*dilation_rate] += attn_weights.sum(dim=-1)
 
