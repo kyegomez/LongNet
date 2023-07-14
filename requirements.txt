@@ -1,0 +1,17 @@
+torch
+einops
+
+accelerate
+bitsandbytes
+fairscale
+
+timm
+ninja
+packaging
+
+transformers
+unittest
+timeit
+
+beartype
+
