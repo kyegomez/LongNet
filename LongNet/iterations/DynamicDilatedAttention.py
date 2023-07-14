@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from LongNet.utils import XPOS, RelativePositionBias
-from LongNet.attend import FlashMHA
+from LongNet.attend import FlashAttention
 
 # Replace this with your correct GPU device
 device = "cuda:0"
@@ -22,7 +22,7 @@ class DynamicDilatedAttention(nn.Module):
         self.dilation_rates = torch.logspace(start=0, end=num_rates-1, steps=num_rates, base=2, dtype=torch.int, device=device)
         self.segment_sizes = torch.logspace(start=0, end=num_rates-1, steps=num_rates, base=2, dtype=torch.int, device=device)
 
-        self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype) for _ in range(num_rates)])
+        self.attention = FlashAttention(causal=self.casual, dropout=dropout).to(device)
         self.dropout = nn.Dropout(dropout)
         self.casual = casual
 
