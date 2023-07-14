@@ -75,9 +75,18 @@ class DynamicDilatedAttention(nn.Module):
 
                 attn_output = self.dropout(attn_output)
 
+                # Prepare output for addition
+                attn_output_reshaped = attn_output.contiguous().view(batch_size, -1, self.d_model)
+                print(f'attn_output_reshaped.shape: {attn_output_reshaped.shape}')  # Print the shape of the reshaped attention output tensor
+
+                # Prepare the slice of outputs for addition
+                outputs_slice = outputs[:, offset::dilation_rate, :attn_output.shape[1]*dilation_rate]
+                print(f'outputs_slice.shape: {outputs_slice.shape}')  # Print the shape of the slice of outputs
+
                 # Add output to the corresponding positions in the outputs tensor
-                outputs[:, offset::dilation_rate, :attn_output.shape[1]*dilation_rate] += attn_output.contiguous().view(batch_size, -1, self.d_model)
+                outputs_slice += attn_output_reshaped
                 print(f'outputs.shape after addition: {outputs.shape}')  # Print the shape of the outputs tensor after addition
+
 
                 # Add softmax denominators to the corresponding positions in the softmax_denominators tensor
                 softmax_denominators[:, offset::dilation_rate, :attn_output.shape[1]*dilation_rate] += attn_weights.sum(dim=-1)
