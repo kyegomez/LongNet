@@ -13,7 +13,7 @@ d_model = 512
 device = 'cuda:0'
 
 # Initialize DilatedAttentionold module
-attention = DilatedAttention(d_model=d_model, num_heads=8, dilation_rate=2, segment_size=64, use_xpos=True, use_rel_pos_bias=True)
+attention = DilatedAttention(d_model=d_model, num_heads=8, dilation_rate=2, segment_size=64, use_xpos=False, use_rel_pos_bias=False)
 
 # Move the model to GPU
 attention.to(device)
