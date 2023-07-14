@@ -85,7 +85,17 @@ class DilatedAttention(nn.Module):
 
             # Apply offset and segment for this head
             x_ = x[:, offset::self.dilation_rate, :]
-            x_ = x_.contiguous().view(batch_size, 1, -1, self.segment_size, self.d_model)  # Add an extra dimension for the number of heads
+
+            #calculate the number of paddding elements needed
+            pad_len = self.segment_size - (x_.shape[1] % self.segment_size)
+            
+            #pad the sequence if necessary
+            if pad_len < self.segment_size:
+                pad = torch.zeros((batch_size, pad_len, self.d_model), device=device, dtype=dtype)
+                x_ = torch.cat([x_, pad], dim=1)
+
+            #reshape the sequence into segments
+            x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
 
             # Process each segment separately
             elements_attns = []
@@ -95,8 +105,6 @@ class DilatedAttention(nn.Module):
                 elements_attns.append(element_attn)
 
             attn_output = torch.cat(elements_attns, dim=2)
-
-
 
             #option2
             # elements_attns = [attention(element.to(dtype), element.to(dtype), element.to(dtype)) for element in x_]
