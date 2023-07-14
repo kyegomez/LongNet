@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from LongNet.utils import XPOS, RelativePositionBias
-from LongNet.attention import FlashAttention
+from LongNet.attend import FlashAttention
 
 # Replace this with your correct GPU device
 device = "cuda:0"
