@@ -7,6 +7,4 @@ timm
 ninja
 packaging
 transformers
-unittest
-timeit
 beartype
