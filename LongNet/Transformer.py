@@ -135,7 +135,7 @@ class Transformer(nn.Module):
         casual = False,  # additional parameter for DilatedAttention
         use_xpos = False,  # additional parameter for DilatedAttention
         use_rel_pos_bias = False,  # additional parameter for DilatedAttention
-        distributed = False,  # additional parameter for DilatedAttention
+        # distributed = False,  # additional parameter for DilatedAttention
         rel_pos = True,
         flash_attn = False
     ):
@@ -155,7 +155,7 @@ class Transformer(nn.Module):
                     casual=casual, 
                     use_xpos=use_xpos, 
                     use_rel_pos_bias=use_rel_pos_bias, 
-                    distributed=distributed
+                    # distributed=distributed
                 ), 
                 FeedForward(dim = dim, mult = ff_mult, dropout = ff_dropout)
             ]))
@@ -196,7 +196,7 @@ class LongNet(nn.Module):
         casual = False,  # added
         use_xpos = False,  # added
         use_rel_pos_bias = False,  # added
-        distributed = False,  # added
+        # distributed = False,  # added
     ):
         super().__init__()
 
@@ -252,7 +252,7 @@ class LongNet(nn.Module):
                 casual = casual,  # added
                 use_xpos = use_xpos,  # added
                 use_rel_pos_bias = use_rel_pos_bias,  # added
-                distributed = distributed,  # added
+                # distributed = distributed,  # added
                 rel_pos = rel_pos,
                 flash_attn = flash_attn
             ))
