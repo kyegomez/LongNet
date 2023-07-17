@@ -16,7 +16,7 @@ casual = False
 use_xpos = False
 use_rel_pos_bias = False
 
-sequence_lengths = list(range(500, 2500, 500))
+sequence_lengths = list(range(500, 10000, 500))
 
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
