@@ -8,3 +8,4 @@ ninja
 packaging
 transformers
 beartype
+pthflops

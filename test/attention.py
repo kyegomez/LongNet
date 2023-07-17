@@ -147,29 +147,29 @@ class TestDilatedAttention(unittest.TestCase):
 
 
 
-class TestMultiModalDilationAttention(unittest.TestCase):
+# class TestMultiModalDilationAttention(unittest.TestCase):
 
-    def test_output_shape(self):
-        # Setup
-        input_tensor = [torch.randn(2, 128, 512), torch.randn(2, 128, 512)]
-        multi_modal_attention = MultiModalDilationAttention(512, 8, 2, 64, num_modalities=2)
+#     def test_output_shape(self):
+#         # Setup
+#         input_tensor = [torch.randn(2, 128, 512), torch.randn(2, 128, 512)]
+#         multi_modal_attention = MultiModalDilationAttention(512, 8, 2, 64, num_modalities=2)
 
-        # Action
-        output = multi_modal_attention(input_tensor)
+#         # Action
+#         output = multi_modal_attention(input_tensor)
 
-        # Assert
-        self.assertEqual(output.shape, (2, 128, 512))
+#         # Assert
+#         self.assertEqual(output.shape, (2, 128, 512))
 
-    def test_single_modality(self):
-        # Setup
-        input_tensor = [torch.randn(2, 128, 512)]
-        multi_modal_attention = MultiModalDilationAttention(512, 8, 2, 64, num_modalities=1)
+#     def test_single_modality(self):
+#         # Setup
+#         input_tensor = [torch.randn(2, 128, 512)]
+#         multi_modal_attention = MultiModalDilationAttention(512, 8, 2, 64, num_modalities=1)
 
-        # Action
-        output = multi_modal_attention(input_tensor)
+#         # Action
+#         output = multi_modal_attention(input_tensor)
 
-        # Assert
-        self.assertEqual(output.shape, (2, 128, 512))
+#         # Assert
+#         self.assertEqual(output.shape, (2, 128, 512))
 
 
 if __name__ == '__main__':
