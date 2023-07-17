@@ -3,6 +3,8 @@ from pthflops import count_ops
 import time
 import matplotlib.pyplot as plt
 
+from LongNet.attention import DilatedAttention
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 bsz = 32
