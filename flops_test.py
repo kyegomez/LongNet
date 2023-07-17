@@ -1,5 +1,3 @@
-from LongNet.attention import DilatedAttention
-
 import torch
 from pthflops import count_ops
 import time
@@ -10,20 +8,34 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 bsz = 32
 d_model = 512
 num_heads = 8
-head_dim = d_model // num_heads
-hidden_size = d_model
+dilation_rate = 2
+segment_size = 512  # You might want to adjust this
+dropout = 0.1
+casual = False
+use_xpos = False
+use_rel_pos_bias = False
+
 sequence_lengths = list(range(500, 2500, 500))
 
 time_taken = []
 tflops_per_s = []
 
-model = DilatedAttention(num_heads, head_dim, hidden_size).to(device)
+model = DilatedAttention(
+    d_model=d_model,
+    num_heads=num_heads,
+    dilation_rate=dilation_rate,
+    segment_size=segment_size,
+    dropout=dropout,
+    casual=casual,
+    use_xpos=use_xpos,
+    use_rel_pos_bias=use_rel_pos_bias
+).to(device)
 
 for seq_len in sequence_lengths:
     x = torch.randn(bsz, seq_len, d_model).to(device)
 
     start_time = time.time()
-    output = model(x, x, x)
+    output = model(x)
     end_time = time.time()
 
     # Count operations on a single forward pass
