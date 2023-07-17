@@ -65,6 +65,10 @@ class DilatedAttention(nn.Module):
 
     def forward(self, x):
         batch_size, seq_len, _ = x.shape
+        padding_len = -seq_len % self.segment_size
+        x = F.pad(x, (0,0,0,padding_len))
+        seq_len = seq_len + padding_len
+        
 
         if self.use_xpos:
             x = self.xpos(x)
