@@ -38,12 +38,10 @@ from transformers import (AutoTokenizer, default_data_collator,
 
 
 
-# INTEGRATE LONGNET selector + stable8bitfusedadam
-
-# from LongNet.torchscale.torchscale.architecture.decoder import Decoder
 from torchscale import Decoder
 from utils import StableAdamWUnfused
-from model import LongNet
+from LongNet.model import LongNet
+
 ############ SETUP CONFIG
 # import torch.distributed as dist
 
@@ -647,4 +645,4 @@ def Train():
 
 
 if __name__ == "__main__":
-    main()
+    Train()
