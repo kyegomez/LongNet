@@ -2,6 +2,7 @@ import math
 import multiprocessing
 import os
 from datetime import timedelta
+
 from functools import partial
 from itertools import chain
 
@@ -13,16 +14,15 @@ from torch.distributed.fsdp import (
     ShardingStrategy,
 )
 from accelerate import Accelerator
+
 from accelerate.utils import (DummyOptim, DummyScheduler,
                               InitProcessGroupKwargs)
 from datasets import concatenate_datasets, load_dataset
 from lion_pytorch import Lion
 
 from torch.nn import LayerNorm
-
 from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
     CheckpointImpl, apply_activation_checkpointing, checkpoint_wrapper)
-
 from torch.distributed.fsdp.wrap import (
     transformer_auto_wrap_policy
 )
@@ -31,10 +31,10 @@ from torch.distributed.fsdp.wrap import (
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+
 from transformers import (AutoTokenizer, default_data_collator,
                           get_cosine_schedule_with_warmup,
                           get_linear_schedule_with_warmup, set_seed)
-
 from LongNet.utils import StableAdamWUnfused
 from LongNet.model import LongNet
 
