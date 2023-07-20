@@ -1,6 +1,6 @@
 import timeit
 import torch
-from LongNet.iterations.DilatedAttentionOld import DilatedAttentionold as DilatedAttention
+from LongNet.attention import DilatedAttention
 
 #model config
 d_model = 512
