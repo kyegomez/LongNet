@@ -10,7 +10,7 @@ from torchscale.architecture.decoder import Decoder
 from torchscale.component.embedding import PositionalEmbedding
 
 
-from LongNet.Transformer import LongNet
+from LongNet.transformer import LongNet
 
 class LongNetTokenizer:
     def __init__(self):
