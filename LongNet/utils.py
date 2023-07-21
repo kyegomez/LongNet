@@ -241,3 +241,73 @@ class XPOS(nn.Module):
 
         x = apply_rotary_pos_emb(x, sin, cos, scale)
         return x
+
+
+import math
+from typing import List, Tuple, Union, Optional
+
+import torch
+
+def SparsifyIndices(
+    x: torch.Tensor, ws: List[int], rs: List[int], head_idx: int
+) -> Tuple[int, torch.Tensor, Optional[torch.Tensor]]:
+    b, n, c = x.size()
+
+    x_indices = torch.arange(0, n, dtype=torch.long, device=x.device)[None, :, None]
+
+    num_subatt = sum([int(math.ceil(n / w)) for w in ws])
+    max_subatt_n = min(n, max([w // r for w, r in zip(ws, rs)]))
+
+    sparse_indices = -1*torch.ones((b, num_subatt * max_subatt_n, c), device=x.device, dtype=torch.int64)
+
+    subatt_idx = 0
+    for w, r in zip(ws, rs):
+        for segment_indices in torch.split(x_indices, w, 1):
+            offset = head_idx % r
+            cur_sparse_indices = segment_indices[:, offset::r, :]
+            start_idx = subatt_idx*max_subatt_n
+            end_idx = start_idx+cur_sparse_indices.shape[1]
+            sparse_indices[:, start_idx:end_idx] = cur_sparse_indices
+            subatt_idx += 1
+
+    if -1 in sparse_indices:
+        padding_mask = sparse_indices[:, :, 0] != -1
+
+        # to allow gather work for batching
+        sparse_indices[~padding_mask] = 0
+
+        # combine batch and subattention dims
+        padding_mask = padding_mask.view((-1, max_subatt_n))
+    else:
+        padding_mask = None
+
+    return max_subatt_n, sparse_indices, padding_mask
+
+
+def MixOutputs(
+    out_shape: Tuple[int, int, int],
+    out_dtype: torch.dtype,
+    out_device: Union[torch.device, str],
+    a_os: torch.Tensor,
+    a_denoms: torch.Tensor,
+    a_indices: torch.Tensor,
+) -> torch.Tensor:
+    # calculate sums of softmax denominators
+    att_denom_sums = torch.zeros((out_shape[0], out_shape[1]), device=out_device)
+    att_denom_sums.scatter_add_(1, a_indices[:, :, 0], a_denoms)
+
+    # select attention softmax denominator sums for current sparse indices
+    sparse_att_denom_sum = torch.gather(att_denom_sums, 1, a_indices[:, :, 0])
+
+    # compute alphas
+    alphas = torch.divide(a_denoms, sparse_att_denom_sum)[:, :, None]
+
+    out = torch.zeros(out_shape, dtype=out_dtype, device=out_device)
+
+    out.scatter_add_(
+        1,
+        a_indices[:, :, :out.shape[2]],
+        torch.multiply(a_os, alphas),
+    )
+
+    return out

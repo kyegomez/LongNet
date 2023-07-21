@@ -3,10 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.parallel import DataParallel
 
-from LongNet.utils import XPOS, RelativePositionBias
-
+from LongNet.utils import XPOS, RelativePositionBias, SparsifyIndices, MixOutputs
 from LongNet.attend import FlashAttention
-
 device = "cuda:0"
 dtype=torch.float16
 
@@ -64,18 +62,23 @@ class DilatedAttention(nn.Module):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
 
     def forward(self, x):
+        # get dimensions
         batch_size, seq_len, _ = x.shape
+
+        # calculate the necessary padding
         padding_len = -seq_len % self.segment_size
         x = F.pad(x, (0,0,0,padding_len))
         seq_len = seq_len + padding_len
-        
 
         if self.use_xpos:
             x = self.xpos(x)
-        
+
+        # Prepare sparse indices
+        max_subatt_n, sparse_indices, padding_mask = SparsifyIndices(x, [self.segment_size], [self.dilation_rate], self.head_offsets)
+
         # Split and sparsify
         x = x.view(batch_size, -1, self.segment_size, self.d_model)
-        x = x[:, :, :: self.dilation_rate, :]
+        x = x.gather(1, sparse_indices[:, :, :x.size(1)])
 
         # Perform attention
         attn_output = self.attention(x, x, x)
@@ -92,17 +95,95 @@ class DilatedAttention(nn.Module):
         # apply dropout
         attn_output = self.dropout(attn_output)
 
-        # Scatter and concatenate 
-        attn_output = attn_output.reshape(batch_size, -1, self.d_model)
+        # Mix outputs
+        attn_output = MixOutputs((batch_size, seq_len, self.d_model), x.dtype, x.device, attn_output, attn_output.sum(dim=-1), sparse_indices)
+
         return attn_output
 
 
+
+
+
+
+
+import torch
+from torch.nn import functional as F
+from torch.nn.parallel import DataParallel
+import torch.distributed as dist
+
+class ConfigurableDilatedAttention(nn.Module):
+    def __init__(self, d_model, num_heads, configurations, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
+        super().__init__()
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.dropout = nn.Dropout(dropout)
+        self.casual = casual
+        self.use_xpos = use_xpos
+        self.use_rel_pos_bias = use_rel_pos_bias
+
+        # Create a DilatedAttention layer for each configuration
+        self.attention_layers = nn.ModuleList([
+            DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, casual, use_xpos, use_rel_pos_bias)
+            for segment_size, dilation_rate in configurations
+        ])
+
+        # Final linear layer
+        self.final_linear = nn.Linear(len(configurations) * d_model, d_model)
+
+    def forward(self, x):
+        # Calculate maximum padding required
+        max_padding = max((segment_size - x.size(1) % segment_size) % segment_size for segment_size, _ in self.configurations)
+        x = F.pad(x, (0,0,0,max_padding))
+
+        outputs = []
+        for layer, (segment_size, dilation_rate) in zip(self.attention_layers, self.configurations):
+            # Fork a new process for each layer
+            future = torch.jit.fork(layer, x)
+            outputs.append(future)
+
+        # Wait for all processes to finish and gather their outputs
+        outputs = [future.wait() for future in outputs]
+
+        # Concatenate all outputs along the feature dimension
+        x = torch.cat(outputs, dim=-1)
+
+        # Apply final linear layer
+        x = self.final_linear(x)
+        
+        return x
+
+
+
+
+
 class MultiHeadDilatedAttention:
-    def __init__():
-        pass
+    def __init__(self, d_model, num_heads, segment_size, dilation_rate, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
+        super().__init__()
 
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.segment_size = segment_size
+        self.dilation_rate = dilation_rate
+        self.head_dim = d_model // num_heads
 
+        assert (self.head_dim * num_heads == d_model), 'Embedding dimebsion should be divisible by number of heads'
 
+        self.dilated_attention = DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, casual, use_xpos, use_rel_pos_bias)
+    
+    def forward(self, x):
+        batch_size, seq_len, _ = x.shape
+
+        #calculate the necessaary padding
+        padding_len = -seq_len % self.segment_size
+        x = F.pad(x, (0, 0, 0, padding_len))
+
+        #init output tensor
+        outputs = torch.zeros_like(x)
+
+        #perform dilated attention on each head
+        outputs = self.dilated_attention(x)
+
+        return outputs
 
 
 
