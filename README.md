@@ -293,17 +293,16 @@ Thank you for sharing!
 
 # Roadmap
 
-* Test and evaluate and patch.
+* Recreate the sparsification mechanism
 
-* And, create an interation of `DilatedAttention` with `FlashBlocksparseMHA`
+* Recreate the gathering mechanism
 
-* Create a multi-modal `DilationAttention` with multiway, sub layernorm, and xpos, sub layernorm, QK Layernorm, One write query head maybe
+* Implement FlashAttention2.0
 
-* Integrate Alibi and xpos for even further ridicoulus length extrapolation
+* Implement Distributed Setup
 
-* Recreate in Triton or Jax for ultra mega speed boost
+*  create the all-gather operation in the backward that becomes a reduce-scatter operation
 
-* Integrate [Dynamic sparse flash attention](https://github.com/epfml/dynamic-sparse-flash-attention/blob/main/runtime-experiments/timeperf-hash-and-qk-sparse.ipynb) with DilatedAttention
 
 
 ## Citation
