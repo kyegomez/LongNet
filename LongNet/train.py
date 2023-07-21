@@ -36,19 +36,13 @@ from transformers import (AutoTokenizer, default_data_collator,
                           get_cosine_schedule_with_warmup,
                           get_linear_schedule_with_warmup, set_seed)
 from LongNet.utils import StableAdamWUnfused
-from LongNet.model import LongNet
+from LongNet.model import Decoder, LongNet
 
 
 import bitsandbytes as bnb
 
 
 
-############ SETUP CONFIG
-# import torch.distributed as dist
-
-# dist.init_process_group(backend='nccl', init_method="env://")
-
-################
 
 class CFG:
     BATCH_SIZE = 3
@@ -95,7 +89,7 @@ def activation_checkpointing(
     """
     if accelerator is not None:
         accelerator.print(f"Using activation checkpointing")
-    check_fn = lambda submodule: isinstance(submodule, TransformerWrapper)
+    check_fn = lambda submodule: isinstance(submodule, Decoder)
     non_reentrant_wrapper = partial(
         checkpoint_wrapper,
         offload_to_cpu=offload_to_cpu,
@@ -135,7 +129,7 @@ def fsdp(
         LongNet_auto_wrap_policy = partial(
             transformer_auto_wrap_policy,
             transformer_layer_cls={
-                TransformerWrapper,
+                Decoder,
             },
         )
     else:
@@ -647,15 +641,15 @@ def Train():
 
 
 def main():
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '9994'
+    os.environ['MASTER_ADDR'] # = 'localhost'
+    os.environ['MASTER_PORT'] #= '9994'
     
     # # [CRITICAL] Pay attention to this when scaling to multiple GPUs and clusters
     
     # # Pay attention to this, use "accelerate config"
 
-    os.environ['RANK']       = str(0) # Number of nodes (servers)
-    os.environ['WORLD_SIZE'] = str(torch.cuda.device_count())
+    os.environ['RANK']       #= str(0) # Number of nodes (servers)
+    os.environ['WORLD_SIZE'] #= str(torch.cuda.device_count())
 
     torch.distributed.init_process_group()
     
