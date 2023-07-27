@@ -1,6 +1,5 @@
 import torch 
 import torch.nn as nn
-import torch.nn.functional as F
 
 from LongNet.utils import XPOS, RelativePositionBias
 from LongNet.attend import FlashMHA
@@ -21,7 +20,7 @@ class TopKAttention(nn.Module):
         top_k_scores, top_k_indices = torch.topk(attention_scores, self.k, dim=-1) # select topk scores and their indices
         top_k_scores = torch.nn.functional.softmax(top_k_scores, dim=-1) # apply softmax to get attention weights
         top_k_values = torch.gather(V, -2, top_k_indices) # gather corresponding values
-        output = torch.matmul(top_k_scores, top_k_values) # calculate attention output
+        torch.matmul(top_k_scores, top_k_values) # calculate attention output
 
 
 # Define the attention module

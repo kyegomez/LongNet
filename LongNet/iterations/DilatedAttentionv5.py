@@ -1,13 +1,9 @@
 import math
 
 #distributed dilated attention based on second iteration
-import torch.distributed as dist
 import torch 
 import torch.nn as nn
-import torch.nn.functional as F
 
-from LongNet.utils import XPOS, RelativePositionBias
-from LongNet.attend import FlashMHA
 import time
 # Replace this with your correct GPU device
 device = "cuda:0"

@@ -1,6 +1,5 @@
 import torch 
 import torch.nn as nn
-import torch.nn.functional as F
 
 from LongNet.utils import XPOS, RelativePositionBias
 from LongNet.attend import FlashMHA

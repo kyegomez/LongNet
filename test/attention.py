@@ -2,7 +2,7 @@ import time
 import unittest
 import torch
 
-from LongNet import DilatedAttention, MultiModalDilationAttention
+from LongNet import DilatedAttention
 
 class TestDilatedAttention(unittest.TestCase):
 
@@ -58,7 +58,7 @@ class TestDilatedAttention(unittest.TestCase):
 
         # Action
         start_time = time.time()
-        output = dilated_attention(input_tensor)
+        dilated_attention(input_tensor)
         end_time = time.time()
 
         # Assert

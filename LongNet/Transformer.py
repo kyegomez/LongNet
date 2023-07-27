@@ -1,12 +1,11 @@
-import math
 import functools
 from itertools import zip_longest
 
 import torch
 import torch.nn.functional as F
-from torch import nn, einsum
+from torch import nn
 
-from einops import rearrange, reduce, repeat, pack, unpack
+from einops import rearrange, repeat, pack, unpack
 from einops.layers.torch import Rearrange
 
 from beartype import beartype
@@ -164,7 +163,7 @@ class Transformer(nn.Module):
 
     def forward(self, x):
         n = x.shape[-2]
-        rotary_emb = self.rotary_emb(n) if exists(self.rotary_emb) else None
+        self.rotary_emb(n) if exists(self.rotary_emb) else None
 
         for attn, ff in self.layers:
             x = attn(token_shift(x)) + x  # rotary_emb removed as it's not supported in DilatedAttention
@@ -311,7 +310,6 @@ class LongNet(nn.Module):
 
         assert ids.ndim in {2, self.stages + 1}
         flattened_dims = ids.ndim == 2
-        ids_orig_ndim = ids.ndim
 
         if ids.numel() == 0:
             return self.forward_empty(ids.shape[0])

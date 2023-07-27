@@ -26,7 +26,7 @@ class LongNetTest:
     def _test_model(self, model_type: str, inputs: dict):
         print(f"Testing {model_type} LongNet model...")
         model = self.longnet_selector.get_model(model_type)
-        outputs = model(**inputs)
+        model(**inputs)
         print(f"{model_type} LongNet model forward pass succeeded!")
 
 # # Now you can use the class like this:

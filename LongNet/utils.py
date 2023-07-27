@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 # This is the unfused version of StableAdamW. It is slower than the fused version (coming).
@@ -37,9 +36,8 @@ class StableAdamWUnfused(torch.optim.Optimizer):
         super(StableAdamWUnfused, self).__setstate__(state)
 
     def step(self, closure=None):
-        loss = None
         if closure is not None:
-            loss = closure()
+            closure()
 
         for group in self.param_groups:
             lr = group["lr"]
@@ -179,7 +177,6 @@ class RelativePositionBias(nn.Module):
 
 
 
-import numpy as np
 import torch
 import torch.nn as nn
 

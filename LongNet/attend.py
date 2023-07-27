@@ -1,8 +1,6 @@
-from torch._C import dtype
 # !pip install torch
 # !pip install einops
 
-import math
 from collections import namedtuple
 from functools import wraps
 from packaging import version

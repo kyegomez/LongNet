@@ -1,7 +1,6 @@
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.parallel import DataParallel
 
 from LongNet.utils import XPOS, RelativePositionBias, SparsifyIndices, MixOutputs
 from LongNet.attend import FlashAttention
@@ -108,8 +107,6 @@ class DilatedAttention(nn.Module):
 
 import torch
 from torch.nn import functional as F
-from torch.nn.parallel import DataParallel
-import torch.distributed as dist
 
 class ConfigurableDilatedAttention(nn.Module):
     def __init__(self, d_model, num_heads, configurations, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):

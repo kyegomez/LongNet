@@ -1,4 +1,3 @@
-import torch
 import unittest
 from transformers import TrainingArguments, Trainer
 from LongNet.model import LongNetTokenizer, LongNet
