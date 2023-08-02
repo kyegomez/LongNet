@@ -1,10 +1,5 @@
 from torch.nn import Module
-
 from transformers import AutoTokenizer
-
-
-
-
 from LongNet.transformer import LongNet
 
 class LongNetTokenizer:
