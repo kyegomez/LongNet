@@ -1,5 +1,3 @@
-# !pip install torch
-# !pip install einops
 
 from collections import namedtuple
 from functools import wraps
