@@ -9,20 +9,6 @@ This implementation of LongNet is brought to you by Agora, we're an all-new open
 
 This is an open source implementation for the paper [LongNet: Scaling Transformers to 1,000,000,000 Tokens](https://arxiv.org/abs/2307.02486) by Jiayu Ding, Shuming Ma, Li Dong, Xingxing Zhang, Shaohan Huang, Wenhui Wang, Furu Wei. The LongNet is a Transformer variant designed to scale sequence length up to more than 1 billion tokens without sacrificing performance on shorter sequences.
 
-## Introduction
-
-Scaling sequence length has become a critical bottleneck in the era of large language models. However, existing methods struggle with either computational complexity or model expressivity, rendering the maximum sequence length restricted. In this paper, they introduce LongNet, a Transformer variant that can scale sequence length to more than 1 billion tokens, without sacrificing the performance on shorter sequences. Specifically, they propose dilated attention, which expands the attentive field exponentially as the distance grows.
-
-## Features
-LongNet has significant advantages:
-1. It has a linear computation complexity and a logarithm dependency between tokens.
-2. It can be served as a distributed trainer for extremely long sequences.
-3. Its dilated attention is a drop-in replacement for standard attention, which can be seamlessly integrated with the existing Transformer-based optimization.
-
-Experiment results demonstrate that LongNet yields strong performance on both long-sequence modeling and general language tasks. Their work opens up new possibilities for modeling very long sequences, e.g., treating a whole corpus or even the entire Internet as a sequence.
-
-Here's the updated usage and installation section with two methods: git clone or pip install LongNet:
-
 ## Installation
 
 You can install LongNet using one of the following methods:
@@ -98,6 +84,20 @@ outputs = attention(inputs)
 # Print the output shape
 print(outputs.shape)  # Expected: [batch_size, seq_len, d_model]
 ```
+
+## Introduction
+
+Scaling sequence length has become a critical bottleneck in the era of large language models. However, existing methods struggle with either computational complexity or model expressivity, rendering the maximum sequence length restricted. In this paper, they introduce LongNet, a Transformer variant that can scale sequence length to more than 1 billion tokens, without sacrificing the performance on shorter sequences. Specifically, they propose dilated attention, which expands the attentive field exponentially as the distance grows.
+
+## Features
+LongNet has significant advantages:
+1. It has a linear computation complexity and a logarithm dependency between tokens.
+2. It can be served as a distributed trainer for extremely long sequences.
+3. Its dilated attention is a drop-in replacement for standard attention, which can be seamlessly integrated with the existing Transformer-based optimization.
+
+Experiment results demonstrate that LongNet yields strong performance on both long-sequence modeling and general language tasks. Their work opens up new possibilities for modeling very long sequences, e.g., treating a whole corpus or even the entire Internet as a sequence.
+
+Here's the updated usage and installation section with two methods: git clone or pip install LongNet:
 
 # Documentation
 
