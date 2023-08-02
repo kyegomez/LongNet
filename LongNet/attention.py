@@ -105,50 +105,6 @@ class DilatedAttention(nn.Module):
 
 
 
-import torch
-from torch.nn import functional as F
-
-class ConfigurableDilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, configurations, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
-        super().__init__()
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.dropout = nn.Dropout(dropout)
-        self.casual = casual
-        self.use_xpos = use_xpos
-        self.use_rel_pos_bias = use_rel_pos_bias
-
-        # Create a DilatedAttention layer for each configuration
-        self.attention_layers = nn.ModuleList([
-            DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, casual, use_xpos, use_rel_pos_bias)
-            for segment_size, dilation_rate in configurations
-        ])
-
-        # Final linear layer
-        self.final_linear = nn.Linear(len(configurations) * d_model, d_model)
-
-    def forward(self, x):
-        # Calculate maximum padding required
-        max_padding = max((segment_size - x.size(1) % segment_size) % segment_size for segment_size, _ in self.configurations)
-        x = F.pad(x, (0,0,0,max_padding))
-
-        outputs = []
-        for layer, (segment_size, dilation_rate) in zip(self.attention_layers, self.configurations):
-            # Fork a new process for each layer
-            future = torch.jit.fork(layer, x)
-            outputs.append(future)
-
-        # Wait for all processes to finish and gather their outputs
-        outputs = [future.wait() for future in outputs]
-
-        # Concatenate all outputs along the feature dimension
-        x = torch.cat(outputs, dim=-1)
-
-        # Apply final linear layer
-        x = self.final_linear(x)
-        
-        return x
-
 
 
 
@@ -184,34 +140,3 @@ class MultiHeadDilatedAttention:
 
 
 
-
-class LongNetTransformer(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rates, segment_sizes):
-        super(LongNetTransformer, self).__init__()
-        assert len(dilation_rates) == len(segment_sizes), "dilation_rates and segment_sizes should have the same length"
-
-
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.dilation_rates = dilation_rates
-        self.segment_sizes = segment_sizes
-        
-        self.dilated_attention_layers = nn.ModuleList(
-            [DilatedAttention(d_model, num_heads, dilation_rate, segment_size)]
-            for dilation_rate, segment_size in zip(dilation_rates, segment_sizes)
-        )
-
-    def forward(self, x):
-        #accumlate outputs from different layers
-        outputs = []
-
-        #process each dilated attention layer
-        for i in range(len(self.dilated_attention_layers)):
-            output = self.dilated_attention_layers[i](x)
-            outputs.append(output)
-
-        #combine the outputs
-        output = torch.sum(torch.stack(outputs), dim=0)
-
-        return output
-    
