@@ -5,51 +5,10 @@ import torch.nn.functional as F
 from LongNet.attend import FlashAttention
 from LongNet.utils import XPOS, RelativePositionBias, SparsifyIndices
 
-import math
-from typing import List, Optional, Tuple, Union
+from typing import Tuple, Union
 
 device = "cuda:0"
 dtype=torch.float16
-
-
-
-def sparsify_indices(
-    x: torch.Tensor, ws: List[int], rs: List[int], head_offsets: torch.Tensor,
-) -> Tuple[int, torch.Tensor, Optional[torch.Tensor]]:
-
-    b, n, c = x.size()
-
-    head_idx = int(head_offsets[0].item())
-
-    x_indices = torch.arange(0, n, dtype=torch.long, device=x.device)[None, :, None]
-
-    num_subatt = sum([int(math.ceil(n / w)) for w in ws])
-    max_subatt_n = min(n, max([w // r for w, r in zip(ws, rs)]))
-
-    sparse_indices = -1*torch.ones((b, num_subatt * max_subatt_n, c), device=x.device, dtype=torch.int64)
-
-    subatt_idx = 0
-    for w, r in zip(ws, rs):
-        for segment_indices in torch.split(x_indices, w, 1):
-            offset = head_idx % r
-            cur_sparse_indices = segment_indices[:, offset::r, :]
-            start_idx = subatt_idx*max_subatt_n
-            end_idx = start_idx+cur_sparse_indices.shape[1]
-            sparse_indices[:, start_idx:end_idx] = cur_sparse_indices
-            subatt_idx += 1
-
-    if -1 in sparse_indices:
-        padding_mask = sparse_indices[:, :, 0] != -1
-
-        # to allow gather work for batching
-        sparse_indices[~padding_mask] = 0
-
-        # combine batch and subattention dims
-        padding_mask = padding_mask.view((-1, max_subatt_n))
-    else:
-        padding_mask = None
-
-    return max_subatt_n, sparse_indices, padding_mask
 
 
 def mix_outputs(
@@ -81,7 +40,7 @@ def mix_outputs(
     return out
 
 
-#add alibi, qk layer norm, one write head, multihway, 
+#add alibi, qk layer norm, one write head, multiway, 
 class DilatedAttention(nn.Module):
     """
     Dilated Attention Module.
@@ -144,17 +103,20 @@ class DilatedAttention(nn.Module):
         if self.use_xpos:
             x = self.xpos(x)
 
-        #
+
         head_idx = int(self.head_offsets[0, 0].item())
 
         # Prepare sparse indices
         # max_subatt_n, sparse_indices, padding_mask = sparsify_indices(x, [self.segment_size], [self.dilation_rate], self.head_offsets)
         max_subatt_n, sparse_indices, padding_mask = SparsifyIndices(x, [self.segment_size], [self.dilation_rate], head_idx)
 
-
         # Split and sparsify
         x = x.view(batch_size, -1, self.segment_size, self.d_model)
-        x = x.gather(1, sparse_indices[:, :, :x.size(1)])
+
+        #Gather operation
+        x_dim1 = x.size(1)
+        x = x.gather(2, sparse_indices[:, :x_dim1, :].unsqueeze(-1).expand(-1, -1, -1, self.d_model))
+
 
         # Perform attention
         attn_output = self.attention(x, x, x)
