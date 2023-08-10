@@ -80,6 +80,8 @@ def MixOutputs(
     att_denom_sums = torch.zeros(att_denom_sums_shape, device=out_device, dtype=out_dtype)
     print(f"Initialized 'att_denom_sums' shape: {att_denom_sums.shape} and dtype: {att_denom_sums.dtype}")
     
+    a_indices = a_indices[:, :, 0].squeeze(-1).squeeze(-1)
+    
     # Use scatter_add_ without unsqueezing a_denoms
     att_denom_sums.scatter_add_(1, a_indices[:, :, 0].squeeze(-1), a_denoms)
 
