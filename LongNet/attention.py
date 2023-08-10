@@ -442,8 +442,12 @@ class MultiHeadDilatedAttention(DilatedAttention):
             Ki = self.sparsify(x, sj, self.key_layers[j])
             Vi = self.sparsify(x, sj, self.value_layers[j])
 
+
+            #combine q, k, v tensors for base class forward method
+            combined_input = torch.cat([Qi, Ki, Vi], dim=-1)
+
             #apply inherited atention on q, k, v
-            head_output = super(MultiHeadDilatedAttention, self).forward(Qi, Ki, Vi)
+            head_output = DilatedAttention(combined_input)
             all_heads_output.append(head_output)
 
         #concat multi head outputs and pdd through final linear layer 
