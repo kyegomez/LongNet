@@ -290,8 +290,11 @@ def MixOutputs(
     # Ensure the source tensor has the same dtype as the target tensor before the scatter operation
     a_denoms = a_denoms.to(out_dtype)
 
+
+    #explicitlyd efine the shape of att_denom_sums
+    att_denom_sums_shape = (out_shape[0], out_shape[1])
     # calculate sums of softmax denominators
-    att_denom_sums = torch.zeros((out_shape[0], out_shape[1]), device=out_device, dtype=out_dtype)
+    att_denom_sums = torch.zeros(att_denom_sums_shape, device=out_device, dtype=out_dtype)
     
     # Use scatter_add_ without unsqueezing a_denoms
     att_denom_sums.scatter_add_(1, a_indices[:, :, 0], a_denoms)
