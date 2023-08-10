@@ -149,7 +149,7 @@ class DilatedAttention(nn.Module):
 
         # Prepare sparse indices
         # max_subatt_n, sparse_indices, padding_mask = sparsify_indices(x, [self.segment_size], [self.dilation_rate], self.head_offsets)
-        max_subatt_n, sparse_indices, padding_mask = self.SparsifyIndices(x, [self.segment_size], [self.dilation_rate], head_idx)
+        max_subatt_n, sparse_indices, padding_mask = SparsifyIndices(x, [self.segment_size], [self.dilation_rate], head_idx)
 
 
         # Split and sparsify
