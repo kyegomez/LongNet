@@ -2,33 +2,30 @@ import timeit
 import torch
 from LongNet.attention import MultiHeadDilatedAttention
 
-
-#model config
+# Model config
 d_model = 512
 num_heads = 8
 dilation_rate = 2
 segment_size = 64
 
 device = "cuda:0"
-dtype=torch.float16
+dtype = torch.float16
 
-#input data
+# Input data
 batch_size = 32
 seq_len = 8192
 
-
-#create model and data
-model = MultiHeadDilatedAttention(d_model, num_heads, dilation_rate, segment_size).to(device)
+# Create model and data
+# Convert model to dtype along with moving to device
+model = MultiHeadDilatedAttention(d_model, num_heads, dilation_rate, segment_size).to(device).to(dtype)
 x = torch.randn((batch_size, seq_len, d_model), device=device, dtype=dtype)
 
-
-#test forward pass
+# Test forward pass
 with torch.no_grad():
     output = model(x)
-    print(f"Output shape: {output.shape}") # expected (batch_size, seq_Len)
+    print(f"Output shape: {output.shape}") # Expected (batch_size, seq_len)
 
-
-#benchmark model
+# Benchmark model
 num_runs = 1000
 start_time = timeit.default_timer()
 for _ in range(num_runs):
