@@ -1,14 +1,106 @@
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from LongNet.attend import FlashAttention
-from LongNet.utils import XPOS, RelativePositionBias, SparsifyIndices, MixOutputs
+from LongNet.utils import XPOS, MixOutputs, RelativePositionBias, SparsifyIndices
 
-from typing import Tuple, Union
+
+import math
+from typing import List, Optional, Tuple, Union
 
 device = "cuda:0"
 dtype=torch.float16
+
+
+def SparsifyIndices(
+    x: torch.Tensor, ws: List[int], rs: List[int], head_idx: int
+) -> Tuple[int, torch.Tensor, Optional[torch.Tensor]]:
+    b, n, c = x.size()
+
+    print(f'x.size 1st: {x.shape} and xdtype: {x.dtype}')
+
+    x_indices = torch.arange(0, n, dtype=torch.long, device=x.device)[None, :, None]
+    print(f"X indices dtype: {x_indices.shape} and dtype: {x.dtype}")
+
+    num_subatt = sum([int(math.ceil(n / w)) for w in ws])
+    max_subatt_n = min(n, max([w // r for w, r in zip(ws, rs)]))
+
+    sparse_indices = -1*torch.ones((b, num_subatt * max_subatt_n, c), device=x.device, dtype=torch.int64)
+    print(f"Sparse indices shape and dtype: {sparse_indices.shape} and dtype: {sparse_indices.dtype}")
+
+    subatt_idx = 0
+    for w, r in zip(ws, rs):
+        for segment_indices in torch.split(x_indices, w, 1):
+            offset = head_idx % r
+            cur_sparse_indices = segment_indices[:, offset::r, :]
+            print(f"Current sparse indices shape {cur_sparse_indices.shape} and dtype: {cur_sparse_indices.dtype}")
+            start_idx = subatt_idx*max_subatt_n
+            end_idx = start_idx+cur_sparse_indices.shape[1]
+            sparse_indices[:, start_idx:end_idx] = cur_sparse_indices
+            subatt_idx += 1
+
+    if -1 in sparse_indices:
+        padding_mask = sparse_indices[:, :, 0] != -1
+
+        # to allow gather work for batching
+        sparse_indices[~padding_mask] = 0
+
+        # combine batch and subattention dims
+        print(f"Padding mask shape: {padding_mask.shape} and dtype: {padding_mask.dtype}")
+        padding_mask = padding_mask.view((-1, max_subatt_n))
+    else:
+        padding_mask = None
+
+    return max_subatt_n, sparse_indices, padding_mask
+
+
+def MixOutputs(
+    out_shape: Tuple[int, int, int],
+    out_dtype: torch.dtype,
+    out_device: Union[torch.device, str],
+    a_os: torch.Tensor,
+    a_denoms: torch.Tensor,
+    a_indices: torch.Tensor,
+) -> torch.Tensor:
+    print(f"Input 'a_os' shape: {a_os.shape} and dtype: {a_os.dtype}")
+    print(f"Input 'a_denoms' shape: {a_denoms.shape} and dtype: {a_denoms.dtype}")
+    print(f"Input 'a_indices' shape: {a_indices.shape} and dtype: {a_indices.dtype}")
+    
+    # Ensure the source tensor has the same dtype as the target tensor before the scatter operation
+    a_denoms = a_denoms.to(out_dtype)
+    print(f"Converted 'a_denoms' dtype: {a_denoms.dtype}")
+
+    # explicitly define the shape of att_denom_sums
+    att_denom_sums_shape = (out_shape[0], out_shape[1])
+    print(f"Att_denom_sums shape to be initialized: {att_denom_sums_shape}")
+    
+    # calculate sums of softmax denominators
+    att_denom_sums = torch.zeros(att_denom_sums_shape, device=out_device, dtype=out_dtype)
+    print(f"Initialized 'att_denom_sums' shape: {att_denom_sums.shape} and dtype: {att_denom_sums.dtype}")
+    
+    # Use scatter_add_ without unsqueezing a_denoms
+    att_denom_sums.scatter_add_(1, a_indices[:, :, 0].squeeze(-1), a_denoms)
+
+    # select attention softmax denominator sums for current sparse indices
+    sparse_att_denom_sum = torch.gather(att_denom_sums, 1, a_indices[:, :, 0].squeeze(-1))
+    print(f"'sparse_att_denom_sum' shape: {sparse_att_denom_sum.shape} and dtype: {sparse_att_denom_sum.dtype}")
+
+    # compute alphas
+    alphas = torch.divide(a_denoms, sparse_att_denom_sum)[:, :, None]
+    print(f"Alphas shape: {alphas.shape} and dtype: {alphas.dtype}")
+
+    out = torch.zeros(out_shape, dtype=out_dtype, device=out_device)
+    print(f"Initialized 'out' shape: {out.shape} and dtype: {out.dtype}")
+
+    out.scatter_add_(
+        1,
+        a_indices[:, :, :out.shape[2]],
+        torch.multiply(a_os, alphas),
+    )
+
+    return out
 
 
 
