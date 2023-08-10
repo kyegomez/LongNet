@@ -11,34 +11,6 @@ device = "cuda:0"
 dtype=torch.float16
 
 
-def mix_outputs(
-    out_shape: Tuple[int, int, int],
-    out_dtype: torch.dtype,
-    out_device: Union[torch.device, str],
-    a_os: torch.Tensor,
-    a_denoms: torch.Tensor,
-    a_indices: torch.Tensor,
-) -> torch.Tensor:
-    # calculate sums of softmax denominators
-    att_denom_sums = torch.zeros((out_shape[0], out_shape[1]), device=out_device)
-    att_denom_sums.scatter_add_(1, a_indices[:, :, 0], a_denoms)
-
-    # select attention softmax denominator sums for current sparse indices
-    sparse_att_denom_sum = torch.gather(att_denom_sums, 1, a_indices[:, :, 0])
-
-    # compute alphas
-    alphas = torch.divide(a_denoms, sparse_att_denom_sum)[:, :, None]
-
-    out = torch.zeros(out_shape, dtype=out_dtype, device=out_device)
-
-    out.scatter_add_(
-        1,
-        a_indices[:, :, :out.shape[2]],
-        torch.multiply(a_os, alphas),
-    )
-
-    return out
-
 
 #add alibi, qk layer norm, one write head, multiway, 
 class DilatedAttention(nn.Module):
