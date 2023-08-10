@@ -416,10 +416,10 @@ class MultiHeadDilatedAttention(DilatedAttention):
         self.concat_layer = nn.Linear(num_heads * self.head_dim, d_model)
 
     def sparsify(self, x, sj, head_layer):
-        x_proj = head_layer(x)
 
         x_proj = head_layer(x)
-        batch_size, seq_len = x_proj.shape
+        batch_size, seq_len, _ = x_proj.shape
+
         padding_len = -seq_len % self.segment_size
         x_proj = F.pad(x_proj, (0, 0, 0, padding_len))
         seq_len += padding_len
