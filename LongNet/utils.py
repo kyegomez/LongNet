@@ -288,13 +288,12 @@ def MixOutputs(
     a_indices: torch.Tensor,
 ) -> torch.Tensor:
     # Ensure the source tensor has the same dtype as the target tensor before the scatter operation
-    print(f"A denoms type: {a_denoms.dtype} and shape: {a_denoms.shape}")
     a_denoms = a_denoms.to(out_dtype)
 
     # calculate sums of softmax denominators
     att_denom_sums = torch.zeros((out_shape[0], out_shape[1]), device=out_device, dtype=out_dtype)
     
-    # Adjusting the unsqueezing operation
+    # Use scatter_add_ without unsqueezing a_denoms
     att_denom_sums.scatter_add_(1, a_indices[:, :, 0], a_denoms)
 
     # select attention softmax denominator sums for current sparse indices
@@ -304,7 +303,6 @@ def MixOutputs(
     alphas = torch.divide(a_denoms, sparse_att_denom_sum)[:, :, None]
 
     out = torch.zeros(out_shape, dtype=out_dtype, device=out_device)
-    print(f"output shape: {out.shape} and dtype: {out.dtype}")
 
     out.scatter_add_(
         1,
