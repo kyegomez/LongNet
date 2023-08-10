@@ -271,10 +271,13 @@ class DilatedAttention(nn.Module):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
 
     def forward(self, x):
+        print(f"X original shape: {x.shape} and x dtype: {x.dtype}")
+
         batch_size, seq_len, _ = x.shape
         padding_len = -seq_len % self.segment_size
         x = F.pad(x, (0,0,0,padding_len))
         seq_len = seq_len + padding_len
+        print(f"Paddex x shape:  {x.shape}")
         
 
         if self.use_xpos:
@@ -282,25 +285,35 @@ class DilatedAttention(nn.Module):
         
         # Split and sparsify
         x = x.view(batch_size, -1, self.segment_size, self.d_model)
+        print(f"z after view shape: {x.shape}")
+
         x = x[:, :, :: self.dilation_rate, :]
+        print(f"x after dilation shape: {x.shape} and x.dtype: {x.dtype}")
 
         # Perform attention
         attn_output = self.attention(x, x, x)
+        print(f"Attn output: {attn_output.shape} and dtype: {attn_output.dtype}")
 
         #if use rel pos => apply relative positioning bias 
         if self.use_rel_pos_bias:
             attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
+            print(f"attn_output: {attn_output.shape} and attn output: {attn_output.dtype}")
 
         # if casual create a mask and apply to the output
         if self.casual:
             mask = self.get_mask(attn_output.size(1), attn_output.size(1))
+            print(f"mask shape: {mask.shape} and mask dtype: {x.dtype}")
+
             attn_output = attn_output.masked_fill(mask, float('-inf'))
+            print(f"attn output shape: {attn_output.shape} and attn_output: {attn_output.dtype}")
 
         # apply dropout
         attn_output = self.dropout(attn_output)
+        print(f"attn output after dropout: {attn_output.shape} and dtype: {attn_output.dtype}")
 
         # Scatter and concatenate 
         attn_output = attn_output.reshape(batch_size, -1, self.d_model)
+        print(f"attn_output scatter and concatenate: {attn_output.shape} and {attn_output.dtype}")
         return attn_output
 
 
