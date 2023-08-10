@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from LongNet.attend import FlashAttention
-from LongNet.utils import XPOS, RelativePositionBias
+from LongNet.utils import XPOS, RelativePositionBias, SparsifyIndices
 
 import math
 from typing import List, Optional, Tuple, Union
@@ -144,10 +144,12 @@ class DilatedAttention(nn.Module):
         if self.use_xpos:
             x = self.xpos(x)
 
+        #
+        head_idx = int(self.head_offsets[0, 0].item())
+
         # Prepare sparse indices
         # max_subatt_n, sparse_indices, padding_mask = sparsify_indices(x, [self.segment_size], [self.dilation_rate], self.head_offsets)
-        # This is how you should call it now
-        max_subatt_n, sparse_indices, padding_mask = sparsify_indices(x, [self.segment_size], [self.dilation_rate], self.head_offsets)
+        max_subatt_n, sparse_indices, padding_mask = self.SparsifyIndices(x, [self.segment_size], [self.dilation_rate], head_idx)
 
 
         # Split and sparsify

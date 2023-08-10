@@ -2,6 +2,7 @@ import math
 from typing import List, Optional, Tuple, Union
 
 import torch
+import torch.nn as nn
 
 # This is the unfused version of StableAdamW. It is slower than the fused version (coming).
 
@@ -99,9 +100,6 @@ class StableAdamWUnfused(torch.optim.Optimizer):
 
 
 
-import math
-
-import torch.nn as nn
 
 
 class RelativePositionBias(nn.Module):
@@ -180,9 +178,6 @@ class RelativePositionBias(nn.Module):
         )
 
 
-
-import torch
-import torch.nn as nn
 
 
 def fixed_pos_embedding(x):
