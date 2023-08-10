@@ -306,7 +306,7 @@ def MixOutputs(
     print(f"Initialized 'att_denom_sums' shape: {att_denom_sums.shape} and dtype: {att_denom_sums.dtype}")
     
     # Use scatter_add_ without unsqueezing a_denoms
-    att_denom_sums.scatter_add_(1, a_indices[:, :, 0], a_denoms)
+    att_denom_sums.scatter_add_(1, a_indices[:, :, 0].squeeze(-1), a_denoms)
 
     # select attention softmax denominator sums for current sparse indices
     sparse_att_denom_sum = torch.gather(att_denom_sums, 1, a_indices[:, :, 0])
