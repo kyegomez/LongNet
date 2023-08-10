@@ -244,12 +244,16 @@ def SparsifyIndices(
 ) -> Tuple[int, torch.Tensor, Optional[torch.Tensor]]:
     b, n, c = x.size()
 
+    print(f'x.size 1st: {x.shape} and xdtype: {x.dtype}')
+
     x_indices = torch.arange(0, n, dtype=torch.long, device=x.device)[None, :, None]
+    print(f"X indices dtype: {x_indices.shape} and dtype: {x.dtype}")
 
     num_subatt = sum([int(math.ceil(n / w)) for w in ws])
     max_subatt_n = min(n, max([w // r for w, r in zip(ws, rs)]))
 
     sparse_indices = -1*torch.ones((b, num_subatt * max_subatt_n, c), device=x.device, dtype=torch.int64)
+    print(f"Sparse indices shape and dtype: {sparse_indices.shape} and dtype: {sparse_indices.dtype}")
 
     subatt_idx = 0
     for w, r in zip(ws, rs):
@@ -284,6 +288,7 @@ def MixOutputs(
     a_indices: torch.Tensor,
 ) -> torch.Tensor:
     # Ensure the source tensor has the same dtype as the target tensor before the scatter operation
+    print(f"A denoms type: {a_denoms.dtype} and shape: {a_denoms.shape}")
     a_denoms = a_denoms.to(out_dtype)
 
     # calculate sums of softmax denominators
@@ -299,6 +304,7 @@ def MixOutputs(
     alphas = torch.divide(a_denoms, sparse_att_denom_sum)[:, :, None]
 
     out = torch.zeros(out_shape, dtype=out_dtype, device=out_device)
+    print(f"output shape: {out.shape} and dtype: {out.dtype}")
 
     out.scatter_add_(
         1,
