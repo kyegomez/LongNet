@@ -14,7 +14,7 @@ dtype=torch.float16
 
 #input data
 batch_size = 32
-seq_len = 8192
+seq_len = 31922
 
 
 #create model and data
