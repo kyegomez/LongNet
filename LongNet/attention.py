@@ -66,17 +66,21 @@ class DilatedAttention(nn.Module):
     def forward(self, x):
         # get dimensions
         batch_size, seq_len, _ = x.shape
+        print(f"X shape: {x.shape} and dtype: {x.dtype}")
 
         # calculate the necessary padding
         padding_len = -seq_len % self.segment_size
         x = F.pad(x, (0,0,0,padding_len))
+        print(f"f x after pad: {x.shape} and dtype: {x.dtype}")
         seq_len = seq_len + padding_len
 
         if self.use_xpos:
             x = self.xpos(x)
+            print(f"XPOS shape and dtype: {x.shape} and dtype: {x.dtype}")
 
 
         head_idx = int(self.head_offsets[0, 0].item())
+        print(f"head_idx: {head_idx}")
 
         # Prepare sparse indices
         # max_subatt_n, sparse_indices, padding_mask = sparsify_indices(x, [self.segment_size], [self.dilation_rate], self.head_offsets)
@@ -84,18 +88,22 @@ class DilatedAttention(nn.Module):
 
         # Split and sparsify
         x = x.view(batch_size, -1, self.segment_size, self.d_model)
+        print(f"Split and sparsify x: {x.shape} and dtype: {x.dtype}")
 
         #Gather operation
         x_dim1 = x.size(1)
         x = x.gather(2, sparse_indices[:, :x_dim1, :].unsqueeze(-1).expand(-1, -1, -1, self.d_model))
+        print(f"gather op: {x.shape} and xdtype: {x.dtype}")
 
 
         # Perform attention
         attn_output = self.attention(x, x, x)
+        print(f"attn output shape and type: {attn_output.shape} and dtype: {attn_output.dtype}")
 
         #if use rel pos => apply relative positioning bias 
         if self.use_rel_pos_bias:
             attn_output += self.relative_bias(batch_size, attn_output.size(1), attn_output.size(1))
+            print(f"attn_output shape and dtype: {attn_output.shape} and dtype: {attn_output.dtype}")
 
         # if casual create a mask and apply to the output
         if self.casual:
@@ -107,6 +115,7 @@ class DilatedAttention(nn.Module):
 
         # Mix outputs
         attn_output = MixOutputs((batch_size, seq_len, self.d_model), x.dtype, x.device, attn_output, attn_output.sum(dim=-1), sparse_indices)
+        print(f"Attn output dtype and shape: {attn_output.shape}")
 
         return attn_output
 
