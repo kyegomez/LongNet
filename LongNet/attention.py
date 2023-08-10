@@ -447,7 +447,7 @@ class MultiHeadDilatedAttention(DilatedAttention):
             combined_input = torch.cat([Qi, Ki, Vi], dim=-1)
 
             #apply inherited atention on q, k, v
-            head_output = DilatedAttention.forward(x=combined_input)
+            head_output = super().forward(Qi, Ki, Vi)
             all_heads_output.append(head_output)
 
         #concat multi head outputs and pdd through final linear layer 
