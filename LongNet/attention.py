@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from LongNet.attend import FlashAttention
-from LongNet.utils import XPOS, RelativePositionBias, SparsifyIndices
+from LongNet.utils import XPOS, RelativePositionBias, SparsifyIndices, MixOutputs
 
 from typing import Tuple, Union
 
@@ -134,7 +134,7 @@ class DilatedAttention(nn.Module):
         attn_output = self.dropout(attn_output)
 
         # Mix outputs
-        attn_output = mix_outputs((batch_size, seq_len, self.d_model), x.dtype, x.device, attn_output, attn_output.sum(dim=-1), sparse_indices)
+        attn_output = MixOutputs((batch_size, seq_len, self.d_model), x.dtype, x.device, attn_output, attn_output.sum(dim=-1), sparse_indices)
 
         return attn_output
 
