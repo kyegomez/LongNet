@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from LongNet.utils import XPOS, RelativePositionBias, SparsifyIndices, MixOutputs
 from LongNet.attend import FlashAttention
+
 device = "cuda:0"
 dtype=torch.float16
 
