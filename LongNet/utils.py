@@ -4,8 +4,6 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
-# This is the unfused version of StableAdamW. It is slower than the fused version (coming).
-
 
 class StableAdamWUnfused(torch.optim.Optimizer):
     def __init__(
@@ -291,8 +289,8 @@ def MixOutputs(
     # calculate sums of softmax denominators
     att_denom_sums = torch.zeros((out_shape[0], out_shape[1]), device=out_device, dtype=out_dtype)
     
-    # Using unsqueeze to ensure the index tensor has the same number of dimensions as the source tensor
-    att_denom_sums.scatter_add_(1, a_indices[:, :, 0].unsqueeze(-1), a_denoms)
+    # Adjusting the unsqueezing operation
+    att_denom_sums.scatter_add_(1, a_indices[:, :, 0], a_denoms)
 
     # select attention softmax denominator sums for current sparse indices
     sparse_att_denom_sum = torch.gather(att_denom_sums, 1, a_indices[:, :, 0])
