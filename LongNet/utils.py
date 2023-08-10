@@ -1,3 +1,6 @@
+import math
+from typing import List, Optional, Tuple, Union
+
 import torch
 
 # This is the unfused version of StableAdamW. It is slower than the fused version (coming).
@@ -97,6 +100,7 @@ class StableAdamWUnfused(torch.optim.Optimizer):
 
 
 import math
+
 import torch.nn as nn
 
 
@@ -180,6 +184,7 @@ class RelativePositionBias(nn.Module):
 import torch
 import torch.nn as nn
 
+
 def fixed_pos_embedding(x):
     seq_len, dim = x.shape
     inv_freq = 1.0 / (10000 ** (torch.arange(0, dim) / dim))
@@ -240,10 +245,6 @@ class XPOS(nn.Module):
         return x
 
 
-import math
-from typing import List, Tuple, Union, Optional
-
-import torch
 
 def SparsifyIndices(
     x: torch.Tensor, ws: List[int], rs: List[int], head_idx: int
