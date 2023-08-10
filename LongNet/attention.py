@@ -417,6 +417,8 @@ class MultiHeadDilatedAttention(DilatedAttention):
 
     def sparsify(self, x, sj, head_layer):
         x_proj = head_layer(x)
+
+        x_proj = head_layer(x)
         batch_size, seq_len = x_proj.shape
         padding_len = -seq_len % self.segment_size
         x_proj = F.pad(x_proj, (0, 0, 0, padding_len))
