@@ -49,39 +49,45 @@ Please note that LongNet requires a compatible Python version (tested with Pytho
 Once you have installed LongNet, you can use the `DilatedAttention` class as follows:
 
 ```python
+import timeit
 import torch
-import torch.nn as nn
-from LongNet import DilatedAttention
+from LongNet.attention import DilatedAttention
 
-# Replace this with your correct GPU device
-device = "cuda:0"
-dtype = torch.float16
 
-# Create an instance of DilatedAttention
+#model config
 d_model = 512
 num_heads = 8
 dilation_rate = 2
 segment_size = 64
-dropout = 0.2  # Specify the dropout rate
-attention = DilatedAttention(
-    d_model=d_model,
-    num_heads=num_heads,
-    dilation_rate=dilation_rate,
-    segment_size=segment_size,
-    dropout=dropout,
-).to(device, dtype=dtype)
 
-# Create some dummy input data
-batch_size = 16
-seq_len = 128
-input_dim = d_model
-inputs = torch.randn(batch_size, seq_len, input_dim, device=device, dtype=dtype)
+device = "cuda:0"
+dtype=torch.float16
 
-# Forward pass
-outputs = attention(inputs)
+#input data
+batch_size = 32
+seq_len = 10000000
 
-# Print the output shape
-print(outputs.shape)  # Expected: [batch_size, seq_len, d_model]
+
+#create model and data
+model = DilatedAttention(d_model, num_heads, dilation_rate, segment_size).to(device)
+x = torch.randn((batch_size, seq_len, d_model), device=device, dtype=dtype)
+
+
+#test forward pass
+with torch.no_grad():
+    output = model(x)
+    print(f"Output shape: {output.shape}") # expected (batch_size, seq_Len)
+
+
+#benchmark model
+num_runs = 1000
+start_time = timeit.default_timer()
+for _ in range(num_runs):
+    model(x)
+
+elapsed_time = timeit.default_timer() - start_time
+print(f"Average forward pass time: {elapsed_time / num_runs:.6f} seconds")
+
 ```
 
 ## Introduction
