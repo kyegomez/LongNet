@@ -260,7 +260,7 @@ def SparsifyIndices(
         for segment_indices in torch.split(x_indices, w, 1):
             offset = head_idx % r
             cur_sparse_indices = segment_indices[:, offset::r, :]
-            print(f"Current sparse indices shape {cur_sparse_indices} and dtype: {cur_sparse_indices.dtype}")
+            print(f"Current sparse indices shape {cur_sparse_indices.shape} and dtype: {cur_sparse_indices.dtype}")
             start_idx = subatt_idx*max_subatt_n
             end_idx = start_idx+cur_sparse_indices.shape[1]
             sparse_indices[:, start_idx:end_idx] = cur_sparse_indices
