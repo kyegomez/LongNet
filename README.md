@@ -27,39 +27,9 @@ This is an open source implementation for the paper [LongNet: Scaling Transforme
 
 ## Installation
 
-You can install LongNet using one of the following methods:
-
-### Method 1: Git Clone
-
-1. Clone the LongNet repository from GitHub:
-
-```shell
-git clone https://github.com/kyegomez/LongNet.git
-```
-
-2. Navigate to the cloned directory:
-
-```shell
-cd LongNet
-```
-
-3. Install the required dependencies:
-
-```shell
-pip install -r requirements.txt
-```
-
-
-### Method 2: Pip Install
-* Note that pip install does not work as the `flash-attn` library cannot be compiled since it has custom CUDA Kernels and they need to be built manually.
-
-1. Install LongNet directly from PyPI using pip:
-
 ```shell
 pip install LongNet
 ```
-
-Please note that LongNet requires a compatible Python version (tested with Python 3.7).
 
 ## Usage
 
