@@ -1,6 +1,6 @@
 import timeit
 import torch 
-from LongNet.attention import ParallelWrapper, DilatedAttention
+from longnet.attention import ParallelWrapper, DilatedAttention
 
 #model condig
 d_model = 512

@@ -1,6 +1,6 @@
 from torch.nn import Module
 from transformers import AutoTokenizer
-from LongNet.transformer import LongNet
+from longnet.transformer import LongNet
 
 class LongNetTokenizer:
     def __init__(self):

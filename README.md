@@ -38,7 +38,7 @@ Once you have installed LongNet, you can use the `DilatedAttention` class as fol
 ```python
 import timeit
 import torch
-from LongNet.attention import DilatedAttention
+from longnet.attention import DilatedAttention
 
 
 #model config

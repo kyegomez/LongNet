@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 from torch.nn.parallel import DataParallel
 
-from LongNet.utils import XPOS, RelativePositionBias
+from longnet.utils import XPOS, RelativePositionBias
 
-from LongNet.attend import FlashAttention
+from longnet.attend import FlashAttention
 
 device = "cuda:0"
 dtype=torch.float16

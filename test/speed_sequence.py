@@ -1,7 +1,7 @@
 import torch
 import time
 
-from LongNet.attention import DilatedAttention
+from longnet.attention import DilatedAttention
 import matplotlib.pyplot as plt
 
 

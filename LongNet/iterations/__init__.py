@@ -1,3 +1,3 @@
-from LongNet.iterations.DilatedAttentionOld import DilatedAttentionold
-from LongNet.iterations.DilatedAttentionOP import DilatedAttentionOP
-from LongNet.iterations.DynamicDilatedAttention import DynamicDilatedAttention
+from longnet.iterations.DilatedAttentionOld import DilatedAttentionold
+from longnet.iterations.DilatedAttentionOP import DilatedAttentionOP
+from longnet.iterations.DynamicDilatedAttention import DynamicDilatedAttention

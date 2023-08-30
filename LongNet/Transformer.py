@@ -12,7 +12,7 @@ from beartype import beartype
 from beartype.typing import Tuple, Union
 
 # from LongNet_pytorch.attfend import Attend
-from LongNet.attention import DilatedAttention as Attention
+from longnet.attention import DilatedAttention as Attention
 
 
 

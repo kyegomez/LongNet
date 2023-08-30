@@ -35,8 +35,8 @@ from tqdm import tqdm
 from transformers import (AutoTokenizer, default_data_collator,
                           get_cosine_schedule_with_warmup,
                           get_linear_schedule_with_warmup, set_seed)
-from LongNet.utils import StableAdamWUnfused
-from LongNet.model import Decoder, LongNet
+from longnet.utils import StableAdamWUnfused
+from longnet.model import Decoder, LongNet
 
 
 import bitsandbytes as bnb

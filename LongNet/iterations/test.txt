@@ -13,7 +13,7 @@ from beartype import beartype
 from beartype.typing import Tuple, Union
 
 # from LongNet_pytorch.attfend import Attend
-from LongNet.attention import DilatedAttention as Attention
+from longnet.attention import DilatedAttention as Attention
 
 
 
@@ -428,7 +428,7 @@ from torchscale.architecture.decoder import Decoder
 from torchscale.component.embedding import PositionalEmbedding
 
 
-from LongNet.Transformer import LongNet
+from longnet.Transformer import LongNet
 
 class LongNetTokenizer:
     def __init__(self):

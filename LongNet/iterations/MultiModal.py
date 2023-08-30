@@ -1,8 +1,8 @@
 import torch 
 import torch.nn as nn
 
-from LongNet.utils import XPOS, RelativePositionBias
-from LongNet.attend import FlashMHA
+from longnet.utils import XPOS, RelativePositionBias
+from longnet.attend import FlashMHA
 
 device = "cuda:0"
 dtype=torch.float16

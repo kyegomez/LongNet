@@ -1,7 +1,7 @@
-# from LongNet.model import LongNetTokenizer, LongNetSelector
+# from longnet.model import LongNetTokenizer, LongNetSelector
 import torch
 # from model import LongNetTokenizer, 
-from LongNet.model import LongNetTokenizer, LongNet
+from longnet.model import LongNetTokenizer, LongNet
 
 class LongNetTest:
     def __init__(self):

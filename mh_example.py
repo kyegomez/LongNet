@@ -1,6 +1,6 @@
 import timeit
 import torch
-from LongNet.attention import MultiHeadDilatedAttention
+from longnet.attention import MultiHeadDilatedAttention
 
 # Model config
 d_model = 512

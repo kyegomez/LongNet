@@ -1,7 +1,7 @@
 import torch 
 import torch.nn as nn
 
-from LongNet.utils import XPOS, RelativePositionBias
+from longnet.utils import XPOS, RelativePositionBias
 
 # Replace this with your correct GPU device
 device = "cuda:0"

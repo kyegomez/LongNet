@@ -1,8 +1,8 @@
 import time
 import torch
 import matplotlib.pyplot as plt
-from LongNet.attention import DilatedAttention
-from LongNet.attend import FlashAttention
+from longnet.attention import DilatedAttention
+from longnet.attend import FlashAttention
 
 
 class DilatedAttentionTest:
