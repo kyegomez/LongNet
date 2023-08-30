@@ -112,7 +112,7 @@ Here's the updated usage and installation section with two methods: git clone or
 
 ```python
 
-from LongNet import Train
+from longnet import Train
 
 Train()
 
@@ -140,17 +140,11 @@ Thank you for sharing!
 
 # Roadmap
 
-* Recreate the sparsification mechanism
+- [ ] Create multihead iteration
 
-* Recreate the gathering mechanism
+- [ ] Create transformer 
 
-* Implement FlashAttention2.0
-
-* Implement Distributed Setup
-
-*  create the all-gather operation in the backward that becomes a reduce-scatter operation
-
-
+- [ ] train on c4
 
 ## Citation
 ```
