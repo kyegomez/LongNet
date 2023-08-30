@@ -9,7 +9,7 @@ num_heads = 8
 dilation_rate = 2
 segment_size = 64
 
-device = "cpu"
+device = "cuda:0"
 dtype=torch.float16
 
 #input data
