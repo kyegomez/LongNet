@@ -211,11 +211,13 @@ from torch import nn
 from einops import rearrange
 
 class DilatedAttention(nn.Module):
-    def __init__(self, dim, segment_length, dilated_rate, qk_norm=True):
+    def __init__(self, dim, segment_length, dilated_rate, dropout=0.1, qk_norm=True):
         super(DilatedAttention, self).__init__()
         self.segment_length = segment_length
         self.dilated_rate = dilated_rate
         self.qk_norm = qk_norm
+
+        self.dropout = nn.Dropout(dropout)
 
         self.to_keys = nn.Linear(dim, dim, bias=False)
         self.to_queries = nn.Linear(dim, dim, bias=False)
@@ -258,6 +260,9 @@ class DilatedAttention(nn.Module):
         #flash
         with torch.backends.cuda.sdp_kernel(enable_math=True):
             out = F.scaled_dot_product_attention(Q, K, V)
+
+            #dropout = 
+            out = self.dropout(out)
 
             #softmax
             out = self.softmax(out)
