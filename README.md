@@ -21,10 +21,6 @@
 This is an open source implementation for the paper [LongNet: Scaling Transformers to 1,000,000,000 Tokens](https://arxiv.org/abs/2307.02486) by Jiayu Ding, Shuming Ma, Li Dong, Xingxing Zhang, Shaohan Huang, Wenhui Wang, Furu Wei. The LongNet is a Transformer variant designed to scale sequence length up to more than 1 billion tokens without sacrificing performance on shorter sequences.
 
 
-### News 📰
-* **This implementation of LongNet is brought to you by Agora, we're an all-new open source AI research organization with 1,500+ AI researchers all striving to advance Humanity!** **[Join us and help contribute to LongNet and or recieve FAST support in the Agora discord!](https://discord.gg/qUtxnK2NMf)**
-* **[Execute tasks and help accelerate AI research with the project board](https://github.com/users/kyegomez/projects/3/views/2)**
-
 ## Installation
 
 ```shell
@@ -90,15 +86,6 @@ LongNet has significant advantages:
 Experiment results demonstrate that LongNet yields strong performance on both long-sequence modeling and general language tasks. Their work opens up new possibilities for modeling very long sequences, e.g., treating a whole corpus or even the entire Internet as a sequence.
 
 Here's the updated usage and installation section with two methods: git clone or pip install LongNet:
-
-# Documentation
-
-* [Click here for the model documentation](docs/DOCUMENTATION.md)
-
-# Training the Model
-* We're still working on the model configuation as closely in the paper as possible. There are 2 methods, one is `accelerate` and the other `from LongNet import Train`
-
-
 
 
 
