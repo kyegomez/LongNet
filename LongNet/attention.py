@@ -100,7 +100,7 @@ class DilatedAttention(nn.Module):
             self.relative_bias = RelativePositionBias(
                 num_buckets=32, max_distance=128, n_heads=heads
             )
-    
+
         self.norm = nn.LayerNorm(dim)
 
         # head offsets
@@ -126,7 +126,7 @@ class DilatedAttention(nn.Module):
 
         x = x[:, :, :: self.dilation_rate, :]
 
-        #qk_norm
+        # qk_norm
         if self.qk_norm:
             q = x
             k = x
@@ -136,7 +136,6 @@ class DilatedAttention(nn.Module):
             q = x
             k = x
             v = x
-
 
         # Perform attention
         attn_output = self.attention(q, k, v)

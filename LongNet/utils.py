@@ -97,9 +97,6 @@ class StableAdamWUnfused(torch.optim.Optimizer):
             group["step"] = step + 1
 
 
-
-
-
 class RelativePositionBias(nn.Module):
     def __init__(
         self, bidirectional=True, num_buckets=32, max_distance=128, n_heads=12
@@ -159,12 +156,8 @@ class RelativePositionBias(nn.Module):
             max_distance=self.max_distance,
         )
         rp_bucket = rp_bucket.to(self.relative_attention_bias.weight.device)
-        values = self.relative_attention_bias(
-            rp_bucket
-        )  # shape (qlen, klen, heads)
-        values = values.permute([2, 0, 1]).unsqueeze(
-            0
-        )  # shape (1, heads, qlen, klen)
+        values = self.relative_attention_bias(rp_bucket)  # shape (qlen, klen, heads)
+        values = values.permute([2, 0, 1]).unsqueeze(0)  # shape (1, heads, qlen, klen)
         return values
 
     def forward(self, batch_size, qlen, klen, step=None):
@@ -176,21 +169,21 @@ class RelativePositionBias(nn.Module):
         )
 
 
-
-
 def fixed_pos_embedding(x):
     seq_len, dim = x.shape
     inv_freq = 1.0 / (10000 ** (torch.arange(0, dim) / dim))
-    sinusoid_inp = (
-        torch.einsum("i , j -> i j", torch.arange(0, seq_len, dtype=torch.float), inv_freq).to(x)
-    )
+    sinusoid_inp = torch.einsum(
+        "i , j -> i j", torch.arange(0, seq_len, dtype=torch.float), inv_freq
+    ).to(x)
     return torch.sin(sinusoid_inp), torch.cos(sinusoid_inp)
+
 
 def rotate_every_two(x):
     x1 = x[:, :, ::2]
     x2 = x[:, :, 1::2]
     x = torch.stack((-x2, x1), dim=-1)
     return x.flatten(-2)  # in einsum notation: rearrange(x, '... d j -> ... (d j)')\
+
 
 def duplicate_interleave(m):
     """
@@ -202,6 +195,7 @@ def duplicate_interleave(m):
     m = m.view(dim0, -1)  # reshape into a matrix, interleaving the copy
     return m
 
+
 def apply_rotary_pos_emb(x, sin, cos, scale=1):
     sin, cos = map(lambda t: duplicate_interleave(t * scale), (sin, cos))
     # einsum notation for lambda t: repeat(t[offset:x.shape[1]+offset,:], "n d -> () n () (d j)", j=2)
@@ -209,9 +203,7 @@ def apply_rotary_pos_emb(x, sin, cos, scale=1):
 
 
 class XPOS(nn.Module):
-    def __init__(
-        self, head_dim, scale_base=512
-    ):
+    def __init__(self, head_dim, scale_base=512):
         super().__init__()
         self.head_dim = head_dim
         self.scale_base = scale_base
@@ -223,14 +215,19 @@ class XPOS(nn.Module):
         length = x.shape[1]
         min_pos = -(length + offset) // 2
         max_pos = length + offset + min_pos
-        scale = self.scale ** torch.arange(min_pos, max_pos, 1).to(self.scale).div(self.scale_base)[:, None]
+        scale = (
+            self.scale
+            ** torch.arange(min_pos, max_pos, 1)
+            .to(self.scale)
+            .div(self.scale_base)[:, None]
+        )
         sin, cos = fixed_pos_embedding(scale)
 
         if scale.shape[0] > length:
             scale = scale[-length:]
             sin = sin[-length:]
             cos = cos[-length:]
-        
+
         if downscale:
             scale = 1 / scale
 
@@ -238,13 +235,12 @@ class XPOS(nn.Module):
         return x
 
 
-
 def SparsifyIndices(
     x: torch.Tensor, ws: List[int], rs: List[int], head_idx: int
 ) -> Tuple[int, torch.Tensor, Optional[torch.Tensor]]:
     b, n, c = x.size()
 
-    print(f'x.size 1st: {x.shape} and xdtype: {x.dtype}')
+    print(f"x.size 1st: {x.shape} and xdtype: {x.dtype}")
 
     x_indices = torch.arange(0, n, dtype=torch.long, device=x.device)[None, :, None]
     print(f"X indices dtype: {x_indices.shape} and dtype: {x.dtype}")
@@ -252,17 +248,23 @@ def SparsifyIndices(
     num_subatt = sum([int(math.ceil(n / w)) for w in ws])
     max_subatt_n = min(n, max([w // r for w, r in zip(ws, rs)]))
 
-    sparse_indices = -1*torch.ones((b, num_subatt * max_subatt_n, c), device=x.device, dtype=torch.int64)
-    print(f"Sparse indices shape and dtype: {sparse_indices.shape} and dtype: {sparse_indices.dtype}")
+    sparse_indices = -1 * torch.ones(
+        (b, num_subatt * max_subatt_n, c), device=x.device, dtype=torch.int64
+    )
+    print(
+        f"Sparse indices shape and dtype: {sparse_indices.shape} and dtype: {sparse_indices.dtype}"
+    )
 
     subatt_idx = 0
     for w, r in zip(ws, rs):
         for segment_indices in torch.split(x_indices, w, 1):
             offset = head_idx % r
             cur_sparse_indices = segment_indices[:, offset::r, :]
-            print(f"Current sparse indices shape {cur_sparse_indices.shape} and dtype: {cur_sparse_indices.dtype}")
-            start_idx = subatt_idx*max_subatt_n
-            end_idx = start_idx+cur_sparse_indices.shape[1]
+            print(
+                f"Current sparse indices shape {cur_sparse_indices.shape} and dtype: {cur_sparse_indices.dtype}"
+            )
+            start_idx = subatt_idx * max_subatt_n
+            end_idx = start_idx + cur_sparse_indices.shape[1]
             sparse_indices[:, start_idx:end_idx] = cur_sparse_indices
             subatt_idx += 1
 
@@ -273,7 +275,9 @@ def SparsifyIndices(
         sparse_indices[~padding_mask] = 0
 
         # combine batch and subattention dims
-        print(f"Padding mask shape: {padding_mask.shape} and dtype: {padding_mask.dtype}")
+        print(
+            f"Padding mask shape: {padding_mask.shape} and dtype: {padding_mask.dtype}"
+        )
         padding_mask = padding_mask.view((-1, max_subatt_n))
     else:
         padding_mask = None
@@ -292,7 +296,7 @@ def MixOutputs(
     print(f"Input 'a_os' shape: {a_os.shape} and dtype: {a_os.dtype}")
     print(f"Input 'a_denoms' shape: {a_denoms.shape} and dtype: {a_denoms.dtype}")
     print(f"Input 'a_indices' shape: {a_indices.shape} and dtype: {a_indices.dtype}")
-    
+
     # Ensure the source tensor has the same dtype as the target tensor before the scatter operation
     a_denoms = a_denoms.to(out_dtype)
     print(f"Converted 'a_denoms' dtype: {a_denoms.dtype}")
@@ -300,17 +304,23 @@ def MixOutputs(
     # explicitly define the shape of att_denom_sums
     att_denom_sums_shape = (out_shape[0], out_shape[1])
     print(f"Att_denom_sums shape to be initialized: {att_denom_sums_shape}")
-    
+
     # calculate sums of softmax denominators
-    att_denom_sums = torch.zeros(att_denom_sums_shape, device=out_device, dtype=out_dtype)
-    print(f"Initialized 'att_denom_sums' shape: {att_denom_sums.shape} and dtype: {att_denom_sums.dtype}")
-    
+    att_denom_sums = torch.zeros(
+        att_denom_sums_shape, device=out_device, dtype=out_dtype
+    )
+    print(
+        f"Initialized 'att_denom_sums' shape: {att_denom_sums.shape} and dtype: {att_denom_sums.dtype}"
+    )
+
     # Use scatter_add_ without unsqueezing a_denoms
     att_denom_sums.scatter_add_(1, a_indices[:, :, 0].squeeze(-1), a_denoms)
 
     # select attention softmax denominator sums for current sparse indices
     sparse_att_denom_sum = torch.gather(att_denom_sums, 1, a_indices[:, :, 0])
-    print(f"'sparse_att_denom_sum' shape: {sparse_att_denom_sum.shape} and dtype: {sparse_att_denom_sum.dtype}")
+    print(
+        f"'sparse_att_denom_sum' shape: {sparse_att_denom_sum.shape} and dtype: {sparse_att_denom_sum.dtype}"
+    )
 
     # compute alphas
     alphas = torch.divide(a_denoms, sparse_att_denom_sum)[:, :, None]
@@ -321,7 +331,7 @@ def MixOutputs(
 
     out.scatter_add_(
         1,
-        a_indices[:, :, :out.shape[2]],
+        a_indices[:, :, : out.shape[2]],
         torch.multiply(a_os, alphas),
     )
 
