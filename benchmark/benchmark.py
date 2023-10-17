@@ -6,10 +6,10 @@ from longnet.attend import FlashAttention
 
 
 class DilatedAttentionTest:
-    def __init__(self, batch_size, d_model, device):
+    def __init__(self, batch_size, dim, device):
         self.model = DilatedAttention(
-            d_model=d_model,
-            num_heads=8,
+            dim=dim,
+            heads=8,
             dilation_rate=2,
             segment_size=64,
             use_xpos=False,
@@ -20,7 +20,7 @@ class DilatedAttentionTest:
         self.device = device
 
     def test(self, seq_len):
-        x = torch.randn(self.batch_size, seq_len, self.model.d_model).to(self.device)
+        x = torch.randn(self.batch_size, seq_len, self.model.dim).to(self.device)
 
         # warm up gpu
         for _ in range(10):
@@ -39,7 +39,7 @@ class DilatedAttentionTest:
 
 
 class FlashAttentionTest(DilatedAttention):
-    def __init__(self, batch_size, d_model, device):
+    def __init__(self, batch_size, dim, device):
         self.model = FlashAttention(causal=False, dropout=0.0, flash=True)
         self.model.to(device)
         self.batch_size = batch_size
@@ -49,11 +49,11 @@ class FlashAttentionTest(DilatedAttention):
 # inti testing
 seq_lengths = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 64000]
 batch_size = 32
-d_model = 512
+dim = 512
 device = "cuda:0"
 
-dilated_tester = DilatedAttentionTest(batch_size, d_model, device)
-flash_tester = FlashAttentionTest(batch_size, d_model, device)
+dilated_tester = DilatedAttentionTest(batch_size, dim, device)
+flash_tester = FlashAttentionTest(batch_size, dim, device)
 
 dilated_times = []
 flash_times = []

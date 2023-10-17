@@ -10,14 +10,14 @@ seq_lengths = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 64000]
 
 # Define batch size and feature dimension
 batch_size = 32
-d_model = 512
+dim = 512
 
 device = "cuda:0"
 
 # Initialize DilatedAttentionold module
 attention = DilatedAttention(
-    d_model=d_model,
-    num_heads=8,
+    dim=dim,
+    heads=8,
     dilation_rate=2,
     segment_size=64,
     use_xpos=False,
@@ -33,7 +33,7 @@ times = []
 # Benchmark each sequence length
 for seq_len in seq_lengths:
     # Create a random input tensor
-    x = torch.randn(batch_size, seq_len, d_model).to(device)
+    x = torch.randn(batch_size, seq_len, dim).to(device)
 
     # Warm up GPU
     for _ in range(10):

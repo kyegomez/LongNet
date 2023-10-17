@@ -161,14 +161,14 @@ class RelativePositionBias(nn.Module):
         rp_bucket = rp_bucket.to(self.relative_attention_bias.weight.device)
         values = self.relative_attention_bias(
             rp_bucket
-        )  # shape (qlen, klen, num_heads)
+        )  # shape (qlen, klen, heads)
         values = values.permute([2, 0, 1]).unsqueeze(
             0
-        )  # shape (1, num_heads, qlen, klen)
+        )  # shape (1, heads, qlen, klen)
         return values
 
     def forward(self, batch_size, qlen, klen, step=None):
-        # shape (batch * num_heads, qlen, klen)
+        # shape (batch * heads, qlen, klen)
         return (
             self.compute_bias(qlen, klen, step)
             .repeat(batch_size, 1, 1, 1)

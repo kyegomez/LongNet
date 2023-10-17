@@ -4,12 +4,11 @@ from longnet.attention import DilatedAttention
 
 
 # model config
-d_model = 512
-num_heads = 8
+dim = 512
+heads = 8
 dilation_rate = 2
 segment_size = 64
 
-device = "cuda:0"
 dtype = torch.float16
 
 # input data
@@ -18,8 +17,8 @@ seq_len = 8192
 
 
 # create model and data
-model = DilatedAttention(d_model, num_heads, dilation_rate, segment_size).to(device)
-x = torch.randn((batch_size, seq_len, d_model), device=device, dtype=dtype)
+model = DilatedAttention(dim, heads, dilation_rate, segment_size)
+x = torch.randn((batch_size, seq_len, dim), dtype=dtype)
 
 
 # test forward pass

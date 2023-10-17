@@ -65,26 +65,26 @@ import torch.nn.functional as F
 from torch.nn import MultiheadAttention
 
 class DilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size):
+    def __init__(self, dim, heads, dilation_rate, segment_size):
         super(DilatedAttention, self).__init__()
-        self.d_model = d_model
-        self.num_heads = num_heads
+        self.dim = dim
+        self.heads = heads
         self.dilation_rate = dilation_rate
         self.segment_size = segment_size
-        self.attention = MultiheadAttention(embed_dim=d_model, num_heads=num_heads)
+        self.attention = MultiheadAttention(embed_dim=dim, heads=heads)
 
     def forward(self, x):
         batch_size, seq_len, _ = x.shape
 
         # Split and sparsify
-        x = x.view(batch_size, -1, self.segment_size, self.d_model)
+        x = x.view(batch_size, -1, self.segment_size, self.dim)
         x = x[:, :, ::self.dilation_rate, :]
 
         # Perform attention
         attn_output, _ = self.attention(x, x, x)
 
         # Scatter and concatenate
-        attn_output = attn_output.view(batch_size, -1, self.d_model)
+        attn_output = attn_output.view(batch_size, -1, self.dim)
         return attn_output
 
 ```
@@ -132,15 +132,15 @@ I will use the MultiwayNetwork that you've shared as a starting point, which ser
 
 ```python
 class MultiModalDilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, causal=False, num_modalities=2):
+    def __init__(self, dim, heads, dilation_rate, segment_size, dropout=0.0, causal=False, num_modalities=2):
         super(MultiModalDilatedAttention, self).__init__()
 
-        self.d_model = d_model
+        self.dim = dim
         self.num_modalities = num_modalities
         self.dilated_attns = nn.ModuleList(
-            [DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, causal) for _ in range(num_modalities)]
+            [DilatedAttention(dim, heads, dilation_rate, segment_size, dropout, causal) for _ in range(num_modalities)]
         )
-        self.cross_modality_attn = DilatedAttention(num_modalities * d_model, num_heads, dilation_rate, segment_size, dropout, causal)
+        self.cross_modality_attn = DilatedAttention(num_modalities * dim, heads, dilation_rate, segment_size, dropout, causal)
 
     def forward(self, x):
         modality_outputs = []
@@ -175,20 +175,20 @@ Let's integrate the `RelativePositionBias` and `XPOS` into the `DilatedAttention
 
 ```python
 class DilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False):
+    def __init__(self, dim, heads, dilation_rate, segment_size, dropout=0.0, casual=False):
         super(DilatedAttention, self).__init__()
-        self.d_model = d_model
-        self.num_heads = num_heads
+        self.dim = dim
+        self.heads = heads
 
         self.dilation_rate = dilation_rate
         self.segment_size = segment_size
 
-        self.attention = FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype)
+        self.attention = FlashMHA(embed_dim=dim, heads=heads, device=device, dtype=dtype)
         self.dropout = nn.Dropout(dropout)
         self.casual = casual
 
-        self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=num_heads)
-        self.xpos = XPOS(head_dim=d_model//num_heads)
+        self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=heads)
+        self.xpos = XPOS(head_dim=dim//heads)
 
     def get_mask(self, i, j):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
@@ -200,7 +200,7 @@ class DilatedAttention(nn.Module):
         x = self.xpos(x)
         
         # Split and sparsify
-        x = x.view(batch_size, -1, self.segment_size, self.d_model)
+        x = x.view(batch_size, -1, self.segment_size, self.dim)
         x = x[:, :, :: self.dilation_rate, :]
 
         # Perform attention
@@ -218,7 +218,7 @@ class DilatedAttention(nn.Module):
         attn_output = self.dropout(attn_output)
 
         # Scatter and concatenate 
-        attn_output = attn_output.view(batch_size, -1, self.d_model)
+        attn_output = attn_output.view(batch_size, -1, self.dim)
         return attn_output
 ```
 
@@ -232,7 +232,7 @@ class DilatedAttention(nn.Module):
 
 Both features can be helpful in tasks where sequence order matters. They are automatically applied in the forward method, but keep in mind that these add to the model complexity.
 
-Use this model just like the previous version. The input to the forward method is a tensor with shape `(batch_size, seq_len, d_model)`, where `seq_len` is the sequence length and `d_model` is the model dimension. It returns an output tensor with the same shape. The model takes care of applying the `RelativePositionBias` and `XPOS` transformations automatically.
+Use this model just like the previous version. The input to the forward method is a tensor with shape `(batch_size, seq_len, dim)`, where `seq_len` is the sequence length and `dim` is the model dimension. It returns an output tensor with the same shape. The model takes care of applying the `RelativePositionBias` and `XPOS` transformations automatically.
 
 
 Taking into account the multi-head attention specifics and computational complexity from the paper, the `DilatedAttention` class can be updated as follows. Now we include an offset for each attention head when selecting the query, key, and value vectors. And the outputs of different heads are concatenated into a final output as described in the paper.
@@ -252,15 +252,15 @@ device = "cuda:0"  # Replace this with your correct GPU device
 dtype=torch.float16
 
 class DilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
+    def __init__(self, dim, heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
         super(DilatedAttention, self).__init__()
-        self.d_model = d_model
-        self.num_heads = num_heads
+        self.dim = dim
+        self.heads = heads
 
         self.dilation_rate = dilation_rate
         self.segment_size = segment_size
 
-        self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device, dtype=dtype) for _ in range(self.dilation_rate)])
+        self.attentions = nn.ModuleList([FlashMHA(embed_dim=dim, heads=heads, device=device, dtype=dtype) for _ in range(self.dilation_rate)])
         self.dropout = nn.Dropout(dropout)
         self.casual = casual
 
@@ -268,9 +268,9 @@ class DilatedAttention(nn.Module):
         self.use_rel_pos_bias = use_rel_pos_bias
 
         if use_xpos:
-            self.xpos = XPOS(head_dim=d_model//num_heads)
+            self.xpos = XPOS(head_dim=dim//heads)
         if use_rel_pos_bias:
-            self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=num_heads)
+            self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=heads)
 
     def get_mask(self, i, j):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
@@ -287,7 +287,7 @@ class DilatedAttention(nn.Module):
             offset = head_idx % self.dilation_rate
 
             x_ = x[:, offset::self.dilation_rate, :]  # Apply offset for each head
-            x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
+            x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.dim)
 
             attn_output, _ = attention(x_, x_, x_)
             if self.use_rel_pos_bias:
@@ -300,8 +300,8 @@ class DilatedAttention(nn.Module):
             attn_output = self.dropout(attn_output)
 
             # Resize back to original size
-            attn_output_resized = torch.zeros((batch_size, seq_len, self.d_model), device=device, dtype=dtype)
-            attn_output_resized[:, offset::self.dilation_rate, :] = attn_output.contiguous().view(batch_size, -1, self.d_model)
+            attn_output_resized = torch.zeros((batch_size, seq_len, self.dim), device=device, dtype=dtype)
+            attn_output_resized[:, offset::self.dilation_rate, :] = attn_output.contiguous().view(batch_size, -1, self.dim)
             
             all_head_outputs.append(attn_output_resized)
 
@@ -332,15 +332,15 @@ from torchscale import XPOS, RelativePositionBias
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DistributedDilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
+    def __init__(self, dim, heads, dilation_rate, segment_size, dropout=0.0, casual=False, use_xpos=False, use_rel_pos_bias=False):
         super(DistributedDilatedAttention, self).__init__()
-        self.d_model = d_model
-        self.num_heads = num_heads
+        self.dim = dim
+        self.heads = heads
 
         self.dilation_rate = dilation_rate
         self.segment_size = segment_size
 
-        self.attentions = nn.ModuleList([FlashMHA(embed_dim=d_model, num_heads=num_heads, device=device) for _ in range(self.dilation_rate)])
+        self.attentions = nn.ModuleList([FlashMHA(embed_dim=dim, heads=heads, device=device) for _ in range(self.dilation_rate)])
         self.dropout = nn.Dropout(dropout)
         self.casual = casual
 
@@ -348,9 +348,9 @@ class DistributedDilatedAttention(nn.Module):
         self.use_rel_pos_bias = use_rel_pos_bias
 
         if use_xpos:
-            self.xpos = XPOS(head_dim=d_model//num_heads)
+            self.xpos = XPOS(head_dim=dim//heads)
         if use_rel_pos_bias:
-            self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=num_heads)
+            self.relative_bias = RelativePositionBias(num_buckets=32, max_distance=128, n_heads=heads)
 
     def get_mask(self, i, j):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
@@ -367,7 +367,7 @@ class DistributedDilatedAttention(nn.Module):
             offset = head_idx % self.dilation_rate
 
             x_ = x[:, offset::self.dilation_rate, :]  # Apply offset for each head
-            x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.d_model)
+            x_ = x_.contiguous().view(batch_size, -1, self.segment_size, self.dim)
 
             # compute attention locally, gather the key-value pairs before computing the attention
             attn_output, _ = attention(x_, x_, x_)
@@ -383,8 +383,8 @@ class DistributedDilatedAttention(nn.Module):
             attn_output = self.dropout(attn_output)
 
             # Resize back to original size
-            attn_output_resized = torch.zeros((batch_size, seq_len, self.d_model), device=device)
-            attn_output_resized[:, offset::self.dilation_rate, :] = attn_output.contiguous().view(batch_size, -1, self.d_model)
+            attn_output_resized = torch.zeros((batch_size, seq_len, self.dim), device=device)
+            attn_output_resized[:, offset::self.dilation_rate, :] = attn_output.contiguous().view(batch_size, -1, self.dim)
             
             all_head_outputs.append(attn_output_resized)
 

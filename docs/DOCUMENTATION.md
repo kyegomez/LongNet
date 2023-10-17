@@ -18,15 +18,15 @@
 
 ```python
 class DilatedAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout=0.0, causal=False, use_xpos=False, use_rel_pos_bias=False ):
+    def __init__(self, dim, heads, dilation_rate, segment_size, dropout=0.0, causal=False, use_xpos=False, use_rel_pos_bias=False ):
         ...
 ```
 
 ## Parameters
 
-- `d_model` (int): The dimensionality of the model. This should match the dimension of the input to the layer.
+- `dim` (int): The dimensionality of the model. This should match the dimension of the input to the layer.
 
-- `num_heads` (int): The number of attention heads to use in the `FlashMHA` attention mechanism.
+- `heads` (int): The number of attention heads to use in the `FlashMHA` attention mechanism.
 
 - `dilation_rate` (int): The dilation rate to use when processing the input sequence. Larger values will result in fewer, but wider, attention computations.
 
@@ -47,7 +47,7 @@ class DilatedAttention(nn.Module):
 First, you need to create an instance of the `DilatedAttention` class. Here is how you do it:
 
 ```python
-dilated_attn = DilatedAttention(d_model=512, num_heads=8, dilation_rate=2, segment_size=64, dropout=0.1, causal=True, use_xpos=False, use_rel_pos_bias=False)
+dilated_attn = DilatedAttention(dim=512, heads=8, dilation_rate=2, segment_size=64, dropout=0.1, causal=True, use_xpos=False, use_rel_pos_bias=False)
 ```
 
 In this example, we're creating a `DilatedAttention` layer with a model dimensionality of 512, 8 attention heads, a dilation rate of 2, a segment size of 64, a dropout rate of 0.1, and causal masking enabled.
@@ -59,7 +59,7 @@ To perform a forward pass through the layer, simply call the instance as if it w
 ```python
 import torch
 
-# Assume x is your input tensor with shape (batch_size, sequence_length, d_model)
+# Assume x is your input tensor with shape (batch_size, sequence_length, dim)
 x = torch.rand(16, 1000, 512).to(device)
 
 output = dilated_attn(x)
@@ -73,18 +73,18 @@ You can integrate the `DilatedAttention` layer into a larger model just like any
 
 ```python
 class SimpleTransformer(nn.Module):
-    def __init__(self, d_model, num_heads, dilation_rate, segment_size, dropout):
+    def __init__(self, dim, heads, dilation_rate, segment_size, dropout):
         super().__init__()
 
-        self.dilated_attn = DilatedAttention(d_model, num_heads, dilation_rate, segment_size, dropout, causal=True, use_xpos=False, use_rel_pos_bias=False)
-        self.fc = nn.Linear(d_model, 10)  # Assume we're doing a 10-class classification task
+        self.dilated_attn = DilatedAttention(dim, heads, dilation_rate, segment_size, dropout, causal=True, use_xpos=False, use_rel_pos_bias=False)
+        self.fc = nn.Linear(dim, 10)  # Assume we're doing a 10-class classification task
 
     def forward(self, x):
         x = self.dilated_attn(x)
         x = self.fc(x[:, 0])  # Use the first position output as the "CLS" token
         return x
 
-model = SimpleTransformer(d_model=512, num_heads=8, dilation_rate=2, segment_size=64, dropout=0.1)
+model = SimpleTransformer(dim=512, heads=8, dilation_rate=2, segment_size=64, dropout=0.1)
 ```
 
 In this example, we first pass the input tensor through the `DilatedAttention` layer, then we pass the output of the first position through a fully-connected layer to perform a classification task.
@@ -152,7 +152,7 @@ DilatedAttention is a module that performs dilated attention on input tensors.
 
 #### Systems Understanding
 
-The DilatedAttention module takes an input tensor of shape (batch_size, sequence_length, d_model) and applies dilated attention to the input. The attention mechanism consists of multiple attention heads with different dilation rates. Each attention head operates on a subset of the input tensor determined by the dilation rate and segment size. The outputs of the attention heads are weighted and combined to produce the final output tensor.
+The DilatedAttention module takes an input tensor of shape (batch_size, sequence_length, dim) and applies dilated attention to the input. The attention mechanism consists of multiple attention heads with different dilation rates. Each attention head operates on a subset of the input tensor determined by the dilation rate and segment size. The outputs of the attention heads are weighted and combined to produce the final output tensor.
 
 The input tensor is first passed through the positional encoding layer, which adds positional information to the input. Then, for each attention head, the input tensor is divided into segments based on the dilation rate. Each segment is fed into a FlashMHA (Flash Multi-Head Attention) module, which performs self-attention on the segment. The attention outputs from each segment are concatenated and form the output of the attention head. If relative positional bias is enabled, the relative positional bias is added to the attention outputs. If casual attention is enabled, a mask is applied to the attention outputs to prevent attending to future positions. The attention outputs are then multiplied by weights corresponding to the dilation rates and combined to form the final output tensor.
 
@@ -163,13 +163,13 @@ import torch
 from LongNet import DilatedAttention
 
 # Create a DilatedAttention module
-dilated_attention = DilatedAttention(d_model=512, num_heads=8, dilation_rate=2, segment_size=16)
+dilated_attention = DilatedAttention(dim=512, heads=8, dilation_rate=2, segment_size=16)
 
 # Generate random input tensor
 batch_size = 4
 sequence_length = 32
-d_model = 512
-input_tensor = torch.randn(batch_size, sequence_length, d_model)
+dim = 512
+input_tensor = torch.randn(batch_size, sequence_length, dim)
 
 # Apply dilated attention to the input tensor
 output_tensor = dilated_attention(input_tensor)
@@ -183,8 +183,8 @@ print(output_tensor.shape)
 ```python
 def __init__(
     self,
-    d_model: int,
-    num_heads: int,
+    dim: int,
+    heads: int,
     dilation_rate: int,
     segment_size: int,
     dropout: float = 0.0,
@@ -199,8 +199,8 @@ Initialize the DilatedAttention module.
 
 **Args:**
 
-- `d_model` (int): The dimension of the model.
-- `num_heads` (int): The number of attention heads.
+- `dim` (int): The dimension of the model.
+- `heads` (int): The number of attention heads.
 - `dilation_rate` (int): The dilation rate.
 - `segment_size` (int): The segment size.
 - `dropout` (float, optional): The dropout rate. Defaults to 0.0.
@@ -221,8 +221,8 @@ Perform forward pass through the DilatedAttention module.
 
 **Args:**
 
-- `x` (torch.Tensor): The input tensor of shape (batch_size, sequence_length, d_model).
+- `x` (torch.Tensor): The input tensor of shape (batch_size, sequence_length, dim).
 
 **Returns:**
 
-- `torch.Tensor`: The output tensor of shape (batch_size, sequence_length, d_model).
+- `torch.Tensor`: The output tensor of shape (batch_size, sequence_length, dim).

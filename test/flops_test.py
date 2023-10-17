@@ -6,8 +6,8 @@ from longnet.attention import DilatedAttention
 
 # Initialize parameters
 bsz = 32
-d_model = 512
-num_heads = 8
+dim = 512
+heads = 8
 dilation_rate = 2
 segment_size = 512  # You might want to adjust this
 dropout = 0.1
@@ -23,8 +23,8 @@ dtype = torch.float32
 
 # Initialize model
 model = DilatedAttention(
-    d_model=d_model,
-    num_heads=num_heads,
+    dim=dim,
+    heads=heads,
     dilation_rate=dilation_rate,
     segment_size=segment_size,
     dropout=dropout,
@@ -38,7 +38,7 @@ tflops_per_s = []
 
 # Benchmark model
 for seq_len in sequence_lengths:
-    x = torch.randn(bsz, seq_len, d_model).to(device).type(dtype)
+    x = torch.randn(bsz, seq_len, dim).to(device).type(dtype)
     torch.cuda.synchronize()
 
     start = time.time()
@@ -47,7 +47,7 @@ for seq_len in sequence_lengths:
     elapsed = time.time() - start
 
     time_taken.append(elapsed)
-    total_flops = 4 * seq_len**2 * (d_model // num_heads) * num_heads
+    total_flops = 4 * seq_len**2 * (dim // heads) * heads
     tflops_per_s.append(total_flops / elapsed / 1e12)  # Convert to TFLOPs
 
 # Print benchmark results

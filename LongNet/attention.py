@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from longnet.attend import FlashAttention
-from longnet.utils import XPOS, MixOutputs, RelativePositionBias, SparsifyIndices
+from longnet.utils import XPOS, RelativePositionBias
 
 device = "cuda:0"
 dtype = torch.float16
@@ -47,8 +47,8 @@ class DilatedAttention(nn.Module):
     Dilated Attention Module.
 
     Arguments:
-        d_model: The dimension of the attention layers.
-        num_heads: The number of attention heads.
+        dim: The dimension of the attention layers.
+        heads: The number of attention heads.
         dilation_rate: The dilation rate for dilated attention.
         segment_size: The segment size for dilated attention.
         dropout (optional): The dropout probability. Default: 0.0
@@ -60,7 +60,7 @@ class DilatedAttention(nn.Module):
         The `DilatedAttention` class can be used as a module for neural networks and is especially suited for transformer architectures.
 
         Example:
-            attention = DilatedAttention(d_model=512, num_heads=8, dilation_rate=2, segment_size=64, use_xpos=True, use_rel_pos_bias=True)
+            attention = DilatedAttention(dim=512, heads=8, dilation_rate=2, segment_size=64, use_xpos=True, use_rel_pos_bias=True)
             output = attention(input_tensor)
 
         This will return the output tensor after applying dilated attention. The `use_xpos` and `use_rel_pos_bias` parameters allow for switching on positional encoding and relative positional bias respectively.
@@ -68,18 +68,19 @@ class DilatedAttention(nn.Module):
 
     def __init__(
         self,
-        d_model,
-        num_heads,
+        dim,
+        heads,
         dilation_rate,
         segment_size,
         dropout=0.0,
         casual=False,
         use_xpos=False,
         use_rel_pos_bias=False,
+        qk_norm=True,
     ):
         super(DilatedAttention, self).__init__()
-        self.d_model = d_model
-        self.num_heads = num_heads
+        self.dim = dim
+        self.heads = heads
 
         self.dilation_rate = dilation_rate
         self.segment_size = segment_size
@@ -89,18 +90,21 @@ class DilatedAttention(nn.Module):
 
         self.use_xpos = use_xpos
         self.use_rel_pos_bias = use_rel_pos_bias
+        self.qk_norm = qk_norm
 
         self.attention = FlashAttention(causal=self.casual, dropout=dropout).to(device)
 
         if use_xpos:
-            self.xpos = XPOS(head_dim=d_model // num_heads)
+            self.xpos = XPOS(head_dim=dim // heads)
         if use_rel_pos_bias:
             self.relative_bias = RelativePositionBias(
-                num_buckets=32, max_distance=128, n_heads=num_heads
+                num_buckets=32, max_distance=128, n_heads=heads
             )
+    
+        self.norm = nn.LayerNorm(dim)
 
         # head offsets
-        self.head_offsets = nn.Parameter(torch.randn(num_heads, d_model))
+        self.head_offsets = nn.Parameter(torch.randn(heads, dim))
 
     def get_mask(self, i, j):
         return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
@@ -118,46 +122,42 @@ class DilatedAttention(nn.Module):
             x = self.xpos(x)
 
         # Split and sparsify
-        x = x.view(batch_size, -1, self.segment_size, self.d_model)
-        print(f"z after view shape: {x.shape}")
+        x = x.view(batch_size, -1, self.segment_size, self.dim)
 
         x = x[:, :, :: self.dilation_rate, :]
-        print(f"x after dilation shape: {x.shape} and x.dtype: {x.dtype}")
+
+        #qk_norm
+        if self.qk_norm:
+            q = x
+            k = x
+            v = x
+            q, k = map(self.norm, (q, k))
+        else:
+            q = x
+            k = x
+            v = x
+
 
         # Perform attention
-        attn_output = self.attention(x, x, x)
-        print(f"Attn output: {attn_output.shape} and dtype: {attn_output.dtype}")
+        attn_output = self.attention(q, k, v)
 
         # if use rel pos => apply relative positioning bias
         if self.use_rel_pos_bias:
             attn_output += self.relative_bias(
                 batch_size, attn_output.size(1), attn_output.size(1)
             )
-            print(
-                f"attn_output: {attn_output.shape} and attn output: {attn_output.dtype}"
-            )
 
         # if casual create a mask and apply to the output
         if self.casual:
             mask = self.get_mask(attn_output.size(1), attn_output.size(1))
-            print(f"mask shape: {mask.shape} and mask dtype: {x.dtype}")
 
             attn_output = attn_output.masked_fill(mask, float("-inf"))
-            print(
-                f"attn output shape: {attn_output.shape} and attn_output: {attn_output.dtype}"
-            )
 
         # apply dropout
         attn_output = self.dropout(attn_output)
-        print(
-            f"attn output after dropout: {attn_output.shape} and dtype: {attn_output.dtype}"
-        )
 
         # Scatter and concatenate
-        attn_output = attn_output.reshape(batch_size, -1, self.d_model)
-        print(
-            f"attn_output scatter and concatenate: {attn_output.shape} and {attn_output.dtype}"
-        )
+        attn_output = attn_output.reshape(batch_size, -1, self.dim)
         return attn_output
 
 
@@ -167,8 +167,8 @@ class MultiHeadDilatedAttention(DilatedAttention):
     The `MultiHeadDilatedAttention` class offers a multi-head version of dilated attention, allowing the model to focus on various parts of an input sequence with different patterns.
 
     **Parameters:**
-    - `d_model`: Dimension of the model. This is usually a multiple of `num_heads`.
-    - `num_heads`: Number of attention heads.
+    - `dim`: Dimension of the model. This is usually a multiple of `heads`.
+    - `heads`: Number of attention heads.
     - `dilation_rate`: The rate of dilation for the dilated attention mechanism.
     - `segment_size`: The size of the segment for dilated attention.
 
@@ -181,32 +181,32 @@ class MultiHeadDilatedAttention(DilatedAttention):
 
     def __init__(
         self,
-        d_model,
-        num_heads,
+        dim,
+        heads,
         dilation_rate,
         segment_size,
         *args,
         **kwargs,
     ):
         super(MultiHeadDilatedAttention, self).__init__(
-            d_model, num_heads, dilation_rate, segment_size, *args, **kwargs
+            dim, heads, dilation_rate, segment_size, *args, **kwargs
         )
 
-        self.head_dim = d_model // num_heads
+        self.head_dim = dim // heads
 
         # define linear layers for Q, K, V projections for each head
         self.query_layers = nn.ModuleList(
-            [nn.Linear(d_model, self.head_dim) for _ in range(num_heads)]
+            [nn.Linear(dim, self.head_dim) for _ in range(heads)]
         )
         self.key_layers = nn.ModuleList(
-            [nn.Linear(d_model, self.head_dim) for _ in range(num_heads)]
+            [nn.Linear(dim, self.head_dim) for _ in range(heads)]
         )
         self.value_layers = nn.ModuleList(
-            [nn.Linear(d_model, self.head_dim) for _ in range(num_heads)]
+            [nn.Linear(dim, self.head_dim) for _ in range(heads)]
         )
 
         # define linear layer for concat the multi head outputs
-        self.concat_layer = nn.Linear(num_heads * self.head_dim, d_model)
+        self.concat_layer = nn.Linear(heads * self.head_dim, dim)
 
     def sparsify(self, x, sj, head_layer):
         x_proj = head_layer(x)
@@ -226,7 +226,7 @@ class MultiHeadDilatedAttention(DilatedAttention):
 
         all_heads_output = []
 
-        for j in range(self.num_heads):
+        for j in range(self.heads):
             sj = j % self.dilation_rate
 
             # create Q, K, V for each head based on offset
