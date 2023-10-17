@@ -17,13 +17,17 @@ seq_len = 8192
 
 # Create model and data
 # Convert model to dtype along with moving to device
-model = MultiHeadDilatedAttention(d_model, num_heads, dilation_rate, segment_size).to(device).to(dtype)
+model = (
+    MultiHeadDilatedAttention(d_model, num_heads, dilation_rate, segment_size)
+    .to(device)
+    .to(dtype)
+)
 x = torch.randn((batch_size, seq_len, d_model), device=device, dtype=dtype)
 
 # Test forward pass
 with torch.no_grad():
     output = model(x)
-    print(f"Output shape: {output.shape}") # Expected (batch_size, seq_len)
+    print(f"Output shape: {output.shape}")  # Expected (batch_size, seq_len)
 
 # Benchmark model
 num_runs = 1000

@@ -5,7 +5,6 @@ from longnet.attention import DilatedAttention
 import matplotlib.pyplot as plt
 
 
-
 # Define sequence lengths to test
 seq_lengths = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 64000]
 
@@ -13,10 +12,17 @@ seq_lengths = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 64000]
 batch_size = 32
 d_model = 512
 
-device = 'cuda:0'
+device = "cuda:0"
 
 # Initialize DilatedAttentionold module
-attention = DilatedAttention(d_model=d_model, num_heads=8, dilation_rate=2, segment_size=64, use_xpos=False, use_rel_pos_bias=False)
+attention = DilatedAttention(
+    d_model=d_model,
+    num_heads=8,
+    dilation_rate=2,
+    segment_size=64,
+    use_xpos=False,
+    use_rel_pos_bias=False,
+)
 
 # Move the model to GPU
 attention.to(device)
@@ -49,9 +55,9 @@ for seq_len in seq_lengths:
 
 # Plot the results
 plt.figure(figsize=(10, 6))
-plt.plot(seq_lengths, times, marker='o')
-plt.title('Average forward pass time for different sequence lengths')
-plt.xlabel('Sequence length')
-plt.ylabel('Average forward pass time (seconds)')
+plt.plot(seq_lengths, times, marker="o")
+plt.title("Average forward pass time for different sequence lengths")
+plt.xlabel("Sequence length")
+plt.ylabel("Average forward pass time (seconds)")
 plt.grid(True)
 plt.show()

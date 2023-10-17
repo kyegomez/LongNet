@@ -2,32 +2,32 @@ import timeit
 import torch
 from longnet.attention import DilatedAttention
 
-#model config
+# model config
 d_model = 512
 num_heads = 8
 dilation_rate = 2
 segment_size = 64
 
 device = "cuda:0"
-dtype=torch.float16
+dtype = torch.float16
 
-#input data
+# input data
 batch_size = 32
 seq_len = 1024
 
 
-#create model and data
+# create model and data
 model = DilatedAttention(d_model, num_heads, dilation_rate, segment_size).to(device)
 x = torch.randn((batch_size, seq_len, d_model), device=device, dtype=dtype)
 
 
-#test forward pass
+# test forward pass
 with torch.no_grad():
     output = model(x)
-    print(f"Output shape: {output.shape}") # expected (batch_size, seq_Len)
+    print(f"Output shape: {output.shape}")  # expected (batch_size, seq_Len)
 
 
-#benchmark model
+# benchmark model
 num_runs = 1000
 start_time = timeit.default_timer()
 for _ in range(num_runs):

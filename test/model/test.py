@@ -2,6 +2,7 @@ import unittest
 from transformers import TrainingArguments, Trainer
 from longnet.model import LongNetTokenizer, LongNet
 
+
 class TestLongNetModels(unittest.TestCase):
     def setUp(self):
         self.model = LongNet()
@@ -13,7 +14,7 @@ class TestLongNetModels(unittest.TestCase):
             save_steps=10_000,
             save_total_limit=2,
             logging_steps=500,
-            logging_dir='./test_logs',
+            logging_dir="./test_logs",
         )
 
     def test_language_model(self):
@@ -28,11 +29,12 @@ class TestLongNetModels(unittest.TestCase):
 
     def get_sample_dataset(self):
         # generate a simple dataset for testing
-        data = {'target_text': ["This is a test sentence."] * 10}
+        data = {"target_text": ["This is a test sentence."] * 10}
 
         # Tokenize dataset
         inputs = self.tokenizer.tokenize(data)
         return inputs
+
 
 if __name__ == "__main__":
     unittest.main()

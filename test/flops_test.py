@@ -19,18 +19,18 @@ sequence_lengths = list(range(500, 2500, 500))
 
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dtype=torch.float32
+dtype = torch.float32
 
 # Initialize model
 model = DilatedAttention(
-    d_model=d_model, 
-    num_heads=num_heads, 
-    dilation_rate=dilation_rate, 
-    segment_size=segment_size, 
-    dropout=dropout, 
-    casual=casual, 
-    use_xpos=use_xpos, 
-    use_rel_pos_bias=use_rel_pos_bias
+    d_model=d_model,
+    num_heads=num_heads,
+    dilation_rate=dilation_rate,
+    segment_size=segment_size,
+    dropout=dropout,
+    casual=casual,
+    use_xpos=use_xpos,
+    use_rel_pos_bias=use_rel_pos_bias,
 ).to(device)
 
 time_taken = []
