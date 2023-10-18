@@ -5,11 +5,20 @@ from einops import rearrange
 
 
 class DilatedAttention(nn.Module):
-    def __init__(self, dim, segment_length, dilated_rate, dropout=0.1, qk_norm=True):
+    def __init__(
+        self,
+        dim,
+        segment_length,
+        dilated_rate,
+        dropout=0.1,
+        qk_norm=True,
+        use_xpos=True,
+    ):
         super(DilatedAttention, self).__init__()
         self.segment_length = segment_length
         self.dilated_rate = dilated_rate
         self.qk_norm = qk_norm
+        self.use_xpos = use_xpos
 
         self.dropout = nn.Dropout(dropout)
 
@@ -20,6 +29,9 @@ class DilatedAttention(nn.Module):
 
         # softmax denominator
         self.softmax = nn.Softmax(dim=-1)
+
+        # if use_xpos:
+        #     self.xpos = XPOS(head_dim = dim // heads)
 
     def _segment_and_sparsify(self, x):
         # Divide x into segments
