@@ -5,6 +5,42 @@ from einops import rearrange
 
 
 class DilatedAttention(nn.Module):
+    """
+    DilatedAttention module
+
+    Args:
+
+        dim (int): Dimension of the input vectors
+        segment_length (int): Length of the segments to be sparsified
+        dilated_rate (int): Rate of dilation
+        dropout (float): Dropout rate
+        qk_norm (bool): Whether to normalize the QK values
+        use_xpos (bool): Whether to use xpos
+        
+    
+    Examples::
+
+        >>> import torch
+        >>> from longnet import DilatedAttention
+        >>> from einops import rearrange
+        >>> # Define input dimensions
+        >>> BATCH_SIZE = 8
+        >>> SEQUENCE_LENGTH = 32
+        >>> DIM = 64
+        >>> SEGMENT_LENGTH = 4
+        >>> DILATED_RATE = 2
+        >>> # Create random input tensors
+        >>> Q = torch.randn(BATCH_SIZE, SEQUENCE_LENGTH, DIM)
+        >>> K = torch.randn(BATCH_SIZE, SEQUENCE_LENGTH, DIM)
+        >>> V = torch.randn(BATCH_SIZE, SEQUENCE_LENGTH, DIM)
+        >>> # Create the DilatedAttention model
+        >>> model = DilatedAttention(DIM, SEGMENT_LENGTH, DILATED_RATE)
+        >>> # Forward pass
+        >>> output = model(Q, K, V)
+        
+    
+    
+    """
     def __init__(
         self,
         dim,
@@ -67,9 +103,6 @@ class DilatedAttention(nn.Module):
 
             # dropout =
             out = self.dropout(out)
-
-            # softmax
-            # out = self.softmax(out)
         return out
 
 

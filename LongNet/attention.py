@@ -76,7 +76,7 @@ class DilatedAttention(nn.Module):
         casual=False,
         use_xpos=False,
         use_rel_pos_bias=False,
-        qk_norm=True,
+        qk_norm=False,
     ):
         super(DilatedAttention, self).__init__()
         self.dim = dim
