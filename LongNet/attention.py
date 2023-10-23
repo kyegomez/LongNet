@@ -5,50 +5,6 @@ import torch.nn.functional as F
 from longnet.attend import FlashAttention
 from longnet.utils import XPOS, RelativePositionBias
 
-device = "cuda:0"
-dtype = torch.float16
-
-
-class ParallelWrapper:
-    """
-    A simple wrapper to enable easy usage of data parallelism.
-
-    Arguments:
-        model: The neural network model to be parallelized.
-        device (optional): The device to which the model should be moved. Default: "cuda".
-        use_data_parallel (optional): A boolean flag to indicate whether to use data parallelism or not. Default: True.
-
-    Usage:
-        The `ParallelWrapper` class can be used as a wrapper for neural networks and is especially suited for transformer architectures.
-
-        Example:
-            model = nn.Linear(512, 512)
-            model = ParallelWrapper(model)
-
-        This will return the model wrapped in the `ParallelWrapper` class. The `use_data_parallel` parameter allows for switching on data parallelism.
-    """
-
-    def __init__(self, model, device="cuda", use_data_parallel=True):
-        self.model = model.to(device)
-        self.use_data_parallel = use_data_parallel
-        self.device = device
-
-        if self.use_data_parallel and torch.cuda.device_count() < 1:
-            print(f"Using {torch.cuda.device_count()} GPUS")
-            self.model = nn.DataParallel(self.model)
-
-    def forward(self, *args, **kwargs):
-        return self.model(*args, **kwargs)
-
-    def to(self, device):
-        self.device = device
-        self.model = self.model.to(device)
-        return self
-
-    def __getattr__(self, name):
-        # redirect attribute access to the internal model to allow direct access to its methods and props
-        return getattr(self.model, name)
-
 
 # add alibi, qk layer norm, one write head, multihway,
 class DilatedAttention(nn.Module):
@@ -86,6 +42,8 @@ class DilatedAttention(nn.Module):
         use_xpos=False,
         use_rel_pos_bias=False,
         qk_norm=False,
+        dtype=torch.float16,
+        device="cuda:0",
     ):
         super(DilatedAttention, self).__init__()
         self.dim = dim
@@ -100,6 +58,8 @@ class DilatedAttention(nn.Module):
         self.use_xpos = use_xpos
         self.use_rel_pos_bias = use_rel_pos_bias
         self.qk_norm = qk_norm
+        self.dtype = dtype
+        self.device = device
 
         self.attention = FlashAttention(causal=self.causal, dropout=dropout).to(device)
 
@@ -118,7 +78,7 @@ class DilatedAttention(nn.Module):
         self.proj_v = nn.Linear(dim, dim)
 
     def get_mask(self, i, j):
-        return torch.ones((i, j), device=device, dtype=torch.bool).triu(j - i + 2)
+        return torch.ones((i, j), device=self.device, dtype=torch.bool).triu(j - i + 2)
 
     def forward(self, x):
         batch_size, seq_len, _ = x.shape
@@ -159,4 +119,3 @@ class DilatedAttention(nn.Module):
         # Scatter and concatenate
         attn_output = attn_output.reshape(batch_size, -1, self.dim)
         return attn_output
-
