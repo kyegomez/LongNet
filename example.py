@@ -14,7 +14,7 @@ seq_len = 8192
 
 
 # create model and data
-model = DilatedAttention(dim, heads, dilation_rate, segment_size)
+model = DilatedAttention(dim, heads, dilation_rate, segment_size, qk_norm=True)
 x = torch.randn((batch_size, seq_len, dim))
 
 output = model(x)

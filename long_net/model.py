@@ -111,6 +111,16 @@ class SwiGLU(nn.Module):
 # Assuming necessary imports like RotaryEmbedding, SwiGLU, etc. are present
 
 
+def FeedForward(dim, hidden_dim, dropout=0.):
+    return nn.Sequential(
+        nn.LayerNorm(dim),
+        nn.Linear(dim, hidden_dim),
+        nn.GELU(),
+        nn.Linear(hidden_dim, dim),
+        nn.Dropout(dropout)
+    )
+
+
 class ParallelTransformerBlock(nn.Module):
     def __init__(
         self, dim, dim_head=64, heads=8, ff_mult=4, dilation_rate=2, segment_size=64
@@ -121,12 +131,14 @@ class ParallelTransformerBlock(nn.Module):
 
         attn_inner_dim = dim_head * heads
         ff_inner_dim = dim * ff_mult
-        self.fused_dims = (attn_inner_dim, dim_head, dim_head, (ff_inner_dim * 2))
 
+        self.fused_dims = (attn_inner_dim, dim_head, dim_head, (ff_inner_dim * 2))
         self.fused_attn_ff_proj = nn.Linear(dim, sum(self.fused_dims), bias=False)
         self.attn_out = nn.Linear(attn_inner_dim, dim, bias=False)
 
-        self.ff_out = nn.Sequential(SwiGLU(), nn.Linear(ff_inner_dim, dim, bias=False))
+
+        # self.ff_out = nn.Sequential(SwiGLU(), nn.Linear(ff_inner_dim, dim, bias=False))
+        self.ff_out = FeedForward(dim, ff_inner_dim, dropout=0.)
 
         # Initialize the DilatedAttention
         self.attn = DilatedAttention(dim, heads, dilation_rate, segment_size)
@@ -143,21 +155,16 @@ class ParallelTransformerBlock(nn.Module):
         self.register_buffer("mask", mask, persistent=False)
         return mask
 
-    def get_rotary_embedding(self, n, device):
-        if self.pos_emb is not None and self.pos_emb.shape[-2] >= n:
-            return self.pos_emb[:n]
-
-        pos_emb = self.rotary_emb(n, device=device)
-        self.register_buffer("pos_emb", pos_emb, persistent=False)
-        return pos_emb
-
     def forward(self, x):
-        n, device, h = x.shape[1], x.device, self.heads
-
+        n, device = x.shape[1], x.device
         x = self.norm(x)
 
         # Get q, k, v, and ff projections
         q, k, v, ff = self.fused_attn_ff_proj(x).split(self.fused_dims, dim=-1)
+
+        # Causal mask
+        causal_mask = self.get_mask(n, device)
+        x = x.masked_fill(causal_mask, -torch.finfo(x.dtype).max)
 
         # Use DilatedAttention for the attention mechanism directly on the normalized x
         out = self.attn(x)
