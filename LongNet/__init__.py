@@ -1,1 +1,1 @@
-from longnet.attention import ParallelWrapper, DilatedAttention
+from longnet.attention import DilatedAttention
