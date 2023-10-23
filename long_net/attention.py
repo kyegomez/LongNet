@@ -78,6 +78,7 @@ class DilatedAttention(nn.Module):
         self.proj_v = nn.Linear(dim, dim)
 
     def get_mask(self, i, j):
+        """i = row, j=column"""
         return torch.ones((i, j), device=self.device, dtype=torch.bool).triu(j - i + 2)
 
     def forward(self, x):
@@ -98,17 +99,6 @@ class DilatedAttention(nn.Module):
             q, k, v = map(self.norm, (self.proj_q(x), self.proj_k(x), self.proj_v(x)))
         else:
             q, k, v = self.proj_q(x), self.proj_k(x), self.proj_v(x)
-
-        # if self.qk_norm:
-        #     q = self.proj(x).transpose(-2, -3)
-        #     k = self.proj(x).transpose(-2, -3)
-        #     v = self.proj(x).transpose(-2, -3)
-        #     q, k = map(self.norm, (q, k))
-        #     q, k, v = q.tranposse(-2, -3), k.tranpose(-2, -3), v.transpose(-2, -3)
-        # else:
-        #     q = self.proj_q(x)
-        #     k = self.proj_k(x)
-        #     v = self.proj_v(x)
 
         # Perform attention
         attn_output = self.attention(q, k, v)
