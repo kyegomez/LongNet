@@ -2,16 +2,28 @@ import torch
 import torch.nn.functional as F
 from einops import rearrange
 from torch import einsum, nn
-import math
 from longnet.attention import DilatedAttention
 
 # helpers
-
-
 def exists(val):
     return val is not None
 
 
+
+# normalization
+# they use layernorm without bias, something that pytorch does not offer
+
+
+class LayerNorm(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.gamma = nn.Parameter(torch.ones(dim))
+        self.register_buffer("beta", torch.zeros(dim))
+
+    def forward(self, x):
+        return F.layer_norm(x, x.shape[-1:], self.gamma, self.beta)
+
+# residual
 # normalization
 class RMSNorm(nn.Module):
     def __init__(self, dim, eps=1e-8):
@@ -23,6 +35,15 @@ class RMSNorm(nn.Module):
     def forward(self, x):
         norm = torch.norm(x, dim=-1, keepdim=True) * self.scale
         return x / norm.clamp(min=self.eps) * self.g
+    
+
+class Residual(nn.Module):
+    def __init__(self, fn):
+        super().__init__()
+        self.fn = fn
+
+    def forward(self, x):
+        return self.fn(x) + x
 
 
 # rotary positional embedding
@@ -51,41 +72,52 @@ def apply_rotary_pos_emb(pos, t):
     return (t * pos.cos()) + (rotate_half(t) * pos.sin())
 
 
-# all we need
+# classic Noam Shazeer paper, except here they use SwiGLU instead of the more popular GEGLU for gating the feedforward
+# https://arxiv.org/abs/2002.05202
+
+
+class SwiGLU(nn.Module):
+    def forward(self, x):
+        x, gate = x.chunk(2, dim=-1)
+        return F.silu(gate) * x
+
+
+# parallel attention and feedforward with residual
+# discovered by Wang et al + EleutherAI from GPT-J fame
+
+# Assuming necessary imports like RotaryEmbedding, SwiGLU, etc. are present
+
 class ParallelTransformerBlock(nn.Module):
     def __init__(self, dim, dim_head=64, heads=8, ff_mult=4):
         super().__init__()
-        self.norm = RMSNorm(dim)
+        self.norm = LayerNorm(dim)
 
         attn_inner_dim = dim_head * heads
         ff_inner_dim = dim * ff_mult
-        self.fused_dims = (attn_inner_dim, dim_head, dim_head, (ff_inner_dim))
+        self.fused_dims = (attn_inner_dim, dim_head, dim_head, (ff_inner_dim * 2))
 
         self.heads = heads
         self.scale = dim_head**-0.5
         self.rotary_emb = RotaryEmbedding(dim_head)
 
         self.fused_attn_ff_proj = nn.Linear(dim, sum(self.fused_dims), bias=False)
-
         self.attn_out = nn.Linear(attn_inner_dim, dim, bias=False)
 
-        # Swap out the linear layers here
-        self.ff_out = nn.Sequential(nn.GELU(), nn.Linear(ff_inner_dim, dim, bias=False))
-
+        self.ff_out = nn.Sequential(
+            SwiGLU(),
+            nn.Linear(ff_inner_dim, dim, bias=False)
+        )
 
         self.attn = DilatedAttention(
-            dim=dim,
+            dim_head,
             heads=heads,
             dilation_rate=2,
             segment_size=64,
-            use_xpos=True,
-            use_rel_pos_bias=True,
+            dropout=0.0,
         )
 
-        # for caching causal mask and rotary embeddings
         self.register_buffer("mask", None, persistent=False)
         self.register_buffer("pos_emb", None, persistent=False)
-
 
     def get_mask(self, n, device):
         if self.mask is not None and self.mask.shape[-1] >= n:
@@ -104,59 +136,16 @@ class ParallelTransformerBlock(nn.Module):
         return pos_emb
 
     def forward(self, x):
-        """
-        einstein notation
-        b - batch
-        h - heads
-        n, i, j - sequence length (base sequence length, source, target)
-        d - feature dimension
-        """
-
         n, device, h = x.shape[1], x.device, self.heads
-
-        # pre layernorm
-
+        
+        # Layer normalization
         x = self.norm(x)
 
-        # attention queries, keys, values, and feedforward inner
+        # Attention queries, keys, values, and feedforward inner
+        ff = self.fused_attn_ff_proj(x).split(self.fused_dims, dim=-1)
 
-        q, k, v, ff = self.fused_attn_ff_proj(x).split(self.fused_dims, dim=-1)
+        out = self.attn(x)
 
-        # split heads
-        # they use multi-query single-key-value attention, yet another Noam Shazeer paper
-        # they found no performance loss past a certain scale, and more efficient decoding obviously
-        # https://arxiv.org/abs/1911.02150
-
-        q = rearrange(q, "b n (h d) -> b h n d", h=h)
-
-        # rotary embeddings
-
-        positions = self.get_rotary_embedding(n, device)
-        q, k = map(lambda t: apply_rotary_pos_emb(positions, t), (q, k))
-
-        # scale
-
-        q = q * self.scale
-
-        # similarity
-
-        sim = einsum("b h i d, b j d -> b h i j", q, k)
-
-        # causal mask
-
-        causal_mask = self.get_mask(n, device)
-        sim = sim.masked_fill(causal_mask, -torch.finfo(sim.dtype).max)
-
-        # attn = sim.softmax(dim=-1)
-        attn = self.attn(sim)
-
-        # aggregate values
-
-        out = einsum("b h i j, b j d -> b h i d", attn, v)
-
-        # merge heads
-
-        out = rearrange(out, "b h n d -> b n (h d)")
         return self.attn_out(out) + self.ff_out(ff)
 
 
@@ -210,3 +199,76 @@ class LongNetTransformer(nn.Module):
         x = self.emb(x)
         x = self.transformer(x)
         return self.to_logits(x)
+
+
+def eval_decorator(fn):
+    def inner(model, *args, **kwargs):
+        was_training = model.training
+        model.eval()
+        out = fn(model, *args, **kwargs)
+        model.train(was_training)
+        return out
+
+    return inner
+
+
+# top k filtering
+
+
+def top_k(logits, thres=0.9):
+    k = int((1 - thres) * logits.shape[-1])
+    val, ind = torch.topk(logits, k)
+    probs = torch.full_like(logits, float("-inf"))
+    probs.scatter_(1, ind, val)
+    return probs
+
+
+class AutoregressiveWrapper(nn.Module):
+    def __init__(self, net, max_seq_len=2048, pad_value=0):
+        super().__init__()
+        self.max_seq_len = max_seq_len
+        self.pad_value = pad_value
+        self.net = net
+
+    @torch.no_grad()
+    @eval_decorator
+    def generate(
+        self,
+        start_tokens,
+        seq_len,
+        eos_token=None,
+        temperature=1.0,
+        filter_thres=0.9,
+        **kwargs
+    ):
+        b, t, device = *start_tokens.shape, start_tokens.device
+
+        out = start_tokens
+
+        for _ in range(seq_len):
+            logits = self.net(out, **kwargs)[:, -1, :]
+
+            filtered_logits = top_k(logits, thres=filter_thres)
+            probs = F.softmax(filtered_logits / temperature, dim=-1)
+
+            sample = torch.multinomial(probs, 1)
+
+            out = torch.cat((out, sample), dim=-1)
+
+            if exists(eos_token):
+                is_eos_token = out == eos_token
+
+                if is_eos_token.any(dim=-1).all():
+                    # mask out everything after the eos tokens
+                    shifted_is_eos_tokens = F.pad(is_eos_token, (1, -1))
+                    mask = shifted_is_eos_tokens.float().cumsum(dim=-1) >= 1
+                    out = out.masked_fill(mask, self.pad_value)
+                    break
+
+        out = out[:, t:]
+        return out
+
+    def forward(self, x, **kwargs):
+        x_inp, x_labels = x[:, :-1], x[:, 1:]
+        logits = self.net(x_inp, **kwargs)
+        return F.cross_entropy(rearrange(logits, "b c n -> b n c"), x_labels)
