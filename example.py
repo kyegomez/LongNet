@@ -18,4 +18,4 @@ model = DilatedAttention(dim, heads, dilation_rate, segment_size)
 x = torch.randn((batch_size, seq_len, dim))
 
 output = model(x)
-print(output.shape)
+print(output)

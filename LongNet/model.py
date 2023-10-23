@@ -4,10 +4,32 @@ from einops import rearrange
 from torch import einsum, nn
 from longnet.attention import DilatedAttention
 
+
 # helpers
 def exists(val):
     return val is not None
 
+
+def eval_decorator(fn):
+    def inner(model, *args, **kwargs):
+        was_training = model.training
+        model.eval()
+        out = fn(model, *args, **kwargs)
+        model.train(was_training)
+        return out
+
+    return inner
+
+
+# top k filtering
+
+
+def top_k(logits, thres=0.9):
+    k = int((1 - thres) * logits.shape[-1])
+    val, ind = torch.topk(logits, k)
+    probs = torch.full_like(logits, float("-inf"))
+    probs.scatter_(1, ind, val)
+    return probs
 
 
 # normalization
@@ -23,6 +45,7 @@ class LayerNorm(nn.Module):
     def forward(self, x):
         return F.layer_norm(x, x.shape[-1:], self.gamma, self.beta)
 
+
 # residual
 # normalization
 class RMSNorm(nn.Module):
@@ -35,7 +58,7 @@ class RMSNorm(nn.Module):
     def forward(self, x):
         norm = torch.norm(x, dim=-1, keepdim=True) * self.scale
         return x / norm.clamp(min=self.eps) * self.g
-    
+
 
 class Residual(nn.Module):
     def __init__(self, fn):
@@ -87,35 +110,28 @@ class SwiGLU(nn.Module):
 
 # Assuming necessary imports like RotaryEmbedding, SwiGLU, etc. are present
 
+
 class ParallelTransformerBlock(nn.Module):
-    def __init__(self, dim, dim_head=64, heads=8, ff_mult=4):
+    def __init__(
+        self, dim, dim_head=64, heads=8, ff_mult=4, dilation_rate=2, segment_size=64
+    ):
         super().__init__()
-        self.norm = LayerNorm(dim)
+        self.heads = heads
+        self.norm = nn.LayerNorm(dim)
 
         attn_inner_dim = dim_head * heads
         ff_inner_dim = dim * ff_mult
         self.fused_dims = (attn_inner_dim, dim_head, dim_head, (ff_inner_dim * 2))
 
-        self.heads = heads
-        self.scale = dim_head**-0.5
-        self.rotary_emb = RotaryEmbedding(dim_head)
-
         self.fused_attn_ff_proj = nn.Linear(dim, sum(self.fused_dims), bias=False)
         self.attn_out = nn.Linear(attn_inner_dim, dim, bias=False)
 
-        self.ff_out = nn.Sequential(
-            SwiGLU(),
-            nn.Linear(ff_inner_dim, dim, bias=False)
-        )
+        self.ff_out = nn.Sequential(SwiGLU(), nn.Linear(ff_inner_dim, dim, bias=False))
 
-        self.attn = DilatedAttention(
-            dim_head,
-            heads=heads,
-            dilation_rate=2,
-            segment_size=64,
-            dropout=0.0,
-        )
+        # Initialize the DilatedAttention
+        self.attn = DilatedAttention(dim, heads, dilation_rate, segment_size)
 
+        # For caching causal mask and rotary embeddings
         self.register_buffer("mask", None, persistent=False)
         self.register_buffer("pos_emb", None, persistent=False)
 
@@ -137,21 +153,19 @@ class ParallelTransformerBlock(nn.Module):
 
     def forward(self, x):
         n, device, h = x.shape[1], x.device, self.heads
-        
-        # Layer normalization
+
         x = self.norm(x)
 
-        # Attention queries, keys, values, and feedforward inner
-        ff = self.fused_attn_ff_proj(x).split(self.fused_dims, dim=-1)
+        # Get q, k, v, and ff projections
+        q, k, v, ff = self.fused_attn_ff_proj(x).split(self.fused_dims, dim=-1)
 
+        # Use DilatedAttention for the attention mechanism directly on the normalized x
         out = self.attn(x)
 
         return self.attn_out(out) + self.ff_out(ff)
 
 
 # Transformer
-
-
 class Transformer(nn.Module):
     def __init__(
         self,
@@ -201,26 +215,7 @@ class LongNetTransformer(nn.Module):
         return self.to_logits(x)
 
 
-def eval_decorator(fn):
-    def inner(model, *args, **kwargs):
-        was_training = model.training
-        model.eval()
-        out = fn(model, *args, **kwargs)
-        model.train(was_training)
-        return out
-
-    return inner
-
-
-# top k filtering
-
-
-def top_k(logits, thres=0.9):
-    k = int((1 - thres) * logits.shape[-1])
-    val, ind = torch.topk(logits, k)
-    probs = torch.full_like(logits, float("-inf"))
-    probs.scatter_(1, ind, val)
-    return probs
+# autoregressive wrapper
 
 
 class AutoregressiveWrapper(nn.Module):
