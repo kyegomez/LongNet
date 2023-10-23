@@ -1,4 +1,4 @@
-# from longnet.model import LongNetTokenizer, LongNetSelector
+# from long_net.model import LongNetTokenizer, LongNetSelector
 import torch
 
 # from model import LongNetTokenizer,

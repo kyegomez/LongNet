@@ -2,7 +2,7 @@
 
 
 # LongNet: Scaling Transformers to 1,000,000,000 Tokens
-![LongNetBanner](longnet.jpg)
+![LongNetBanner](long_net.jpg)
 
 
 [![GitHub issues](https://img.shields.io/github/issues/kyegomez/LongNet)](https://github.com/kyegomez/LongNet/issues) 
@@ -33,7 +33,7 @@ Once you have installed LongNet, you can use the `DilatedAttention` class as fol
 
 ```python
 import torch
-from longnet.attention import DilatedAttention
+from long_net.attention import DilatedAttention
 
 
 # model config
