@@ -68,10 +68,10 @@ class DilatedAttention(nn.Module):
             )
 
         self.norm = nn.LayerNorm(dim)
-        
+
         # head offsets
         self.head_offsets = nn.Parameter(torch.randn(heads, dim))
-        
+
         # Linear Projections
         self.proj_q = nn.Linear(dim, dim)
         self.proj_k = nn.Linear(dim, dim)
@@ -99,7 +99,6 @@ class DilatedAttention(nn.Module):
         else:
             q, k, v = self.proj_q(x), self.proj_k(x), self.proj_v(x)
 
-
         # if self.qk_norm:
         #     q = self.proj(x).transpose(-2, -3)
         #     k = self.proj(x).transpose(-2, -3)
@@ -110,7 +109,6 @@ class DilatedAttention(nn.Module):
         #     q = self.proj_q(x)
         #     k = self.proj_k(x)
         #     v = self.proj_v(x)
-
 
         # Perform attention
         attn_output = self.attention(q, k, v)

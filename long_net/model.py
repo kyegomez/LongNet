@@ -2,7 +2,9 @@ import torch
 import torch.nn.functional as F
 from einops import rearrange
 from torch import einsum, nn
-from long_net.attention import DilatedAttention
+
+# from long_net.attention import DilatedAttention
+from test import DilatedAttention
 
 
 # helpers
@@ -111,41 +113,46 @@ class SwiGLU(nn.Module):
 # Assuming necessary imports like RotaryEmbedding, SwiGLU, etc. are present
 
 
-def FeedForward(dim, hidden_dim, dropout=0.):
+def FeedForward(dim, hidden_dim, dropout=0.0):
     return nn.Sequential(
         nn.LayerNorm(dim),
         nn.Linear(dim, hidden_dim),
         nn.GELU(),
         nn.Linear(hidden_dim, dim),
-        nn.Dropout(dropout)
+        nn.Dropout(dropout),
     )
 
 
 class ParallelTransformerBlock(nn.Module):
-    def __init__(
-        self, dim, dim_head=64, heads=8, ff_mult=4, dilation_rate=2, segment_size=64
-    ):
+    def __init__(self, dim, dim_head=64, heads=8, ff_mult=4):
         super().__init__()
-        self.heads = heads
-        self.norm = nn.LayerNorm(dim)
+        self.norm = LayerNorm(dim)
 
         attn_inner_dim = dim_head * heads
         ff_inner_dim = dim * ff_mult
-
         self.fused_dims = (attn_inner_dim, dim_head, dim_head, (ff_inner_dim * 2))
+
+        self.heads = heads
+        self.scale = dim_head**-0.5
+        self.rotary_emb = RotaryEmbedding(dim_head)
+
         self.fused_attn_ff_proj = nn.Linear(dim, sum(self.fused_dims), bias=False)
         self.attn_out = nn.Linear(attn_inner_dim, dim, bias=False)
 
+        self.attn = DilatedAttention(
+            dim, heads, dilation_rates=[1, 2, 4], segment_length=4
+        )
 
-        # self.ff_out = nn.Sequential(SwiGLU(), nn.Linear(ff_inner_dim, dim, bias=False))
-        self.ff_out = FeedForward(dim, ff_inner_dim, dropout=0.)
+        self.ff_out = nn.Sequential(SwiGLU(), nn.Linear(ff_inner_dim, dim, bias=False))
 
-        # Initialize the DilatedAttention
-        self.attn = DilatedAttention(dim, heads, dilation_rate, segment_size)
+        # for caching causal mask and rotary embeddings
 
-        # For caching causal mask and rotary embeddings
         self.register_buffer("mask", None, persistent=False)
         self.register_buffer("pos_emb", None, persistent=False)
+
+        self.proj_q = nn.Linear(dim, dim)
+        self.proj_k = nn.Linear(dim, dim)
+        self.proj_v = nn.Linear(dim, dim)
 
     def get_mask(self, n, device):
         if self.mask is not None and self.mask.shape[-1] >= n:
@@ -155,21 +162,47 @@ class ParallelTransformerBlock(nn.Module):
         self.register_buffer("mask", mask, persistent=False)
         return mask
 
+    def get_rotary_embedding(self, n, device):
+        if self.pos_emb is not None and self.pos_emb.shape[-2] >= n:
+            return self.pos_emb[:n]
+
+        pos_emb = self.rotary_emb(n, device=device)
+        self.register_buffer("pos_emb", pos_emb, persistent=False)
+        return pos_emb
+
     def forward(self, x):
-        n, device = x.shape[1], x.device
+        """
+        einstein notation
+        b - batch
+        h - heads
+        n, i, j - sequence length (base sequence length, source, target)
+        d - feature dimension
+        """
+
+        n, device, h = x.shape[1], x.device, self.heads
+
+        # pre layernorm
+
         x = self.norm(x)
 
-        # Get q, k, v, and ff projections
-        q, k, v, ff = self.fused_attn_ff_proj(x).split(self.fused_dims, dim=-1)
+        # attention queries, keys, values, and feedforward inner
 
-        # Causal mask
-        causal_mask = self.get_mask(n, device)
-        x = x.masked_fill(causal_mask, -torch.finfo(x.dtype).max)
+        q = self.proj_q(x)
+        k = self.proj_k(x)
+        v = self.proj_v(x)
 
-        # Use DilatedAttention for the attention mechanism directly on the normalized x
-        out = self.attn(x)
+        # attention
 
-        return self.attn_out(out) + self.ff_out(ff)
+        attn = self.attn(q, k, v)
+
+        # # aggregate values
+
+        # out = einsum("b h i j, b j d -> b h i d", attn, v)
+
+        # # merge heads
+
+        # out = rearrange(out, "b h n d -> b n (h d)")
+        return attn
 
 
 # Transformer
@@ -185,14 +218,22 @@ class Transformer(nn.Module):
         super().__init__()
         self.layers = nn.ModuleList([])
 
+        self.feedforward = (FeedForward(dim, dim, dropout=0.1),)
+
         for _ in range(depth):
             self.layers.append(
-                ParallelTransformerBlock(dim, dim_head, heads, ff_mult),
+                nn.ModuleList(
+                    [
+                        ParallelTransformerBlock(dim, dim_head, heads, ff_mult),
+                        FeedForward(dim, dim, dropout=0.1),
+                    ]
+                )
             )
 
     def forward(self, x):
-        for block in self.layers:
+        for block, ff in self.layers:
             x = block(x) + x
+            x = ff(x) + x
         return x
 
 

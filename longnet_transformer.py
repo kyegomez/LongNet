@@ -12,4 +12,4 @@ longnet = LongNetTransformer(
 
 tokens = torch.randint(0, 20000, (1, 512))
 logits = longnet(tokens)
-print(logits.shape)
+print(logits)
