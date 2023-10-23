@@ -20,6 +20,10 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.6"
 ]
+packages = [
+    { include = "long_net" },
+    { include = "long_net/**/*.py" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.6"
