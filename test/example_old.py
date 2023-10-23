@@ -1,6 +1,6 @@
 import timeit
 import torch
-from longnet.attention import DilatedAttention
+from long_net.attention import DilatedAttention
 
 # model config
 dim = 512

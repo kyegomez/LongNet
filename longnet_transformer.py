@@ -1,5 +1,5 @@
 import torch
-from longnet.model import LongNetTransformer
+from long_net.model import LongNetTransformer
 
 longnet = LongNetTransformer(
     num_tokens=20000,

@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from einops import rearrange
 from torch import einsum, nn
-from longnet.attention import DilatedAttention
+from long_net.attention import DilatedAttention
 
 
 # helpers

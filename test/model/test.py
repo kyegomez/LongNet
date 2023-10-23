@@ -1,6 +1,6 @@
 import unittest
 from transformers import TrainingArguments, Trainer
-from longnet.model import LongNetTokenizer, LongNet
+from long_net.model import LongNetTokenizer, LongNet
 
 
 class TestLongNetModels(unittest.TestCase):

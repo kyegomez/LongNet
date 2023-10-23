@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from longnet.attend import FlashAttention
-from longnet.utils import XPOS, RelativePositionBias
+from long_net.attend import FlashAttention
+from long_net.utils import XPOS, RelativePositionBias
 
 
 # add alibi, qk layer norm, one write head, multihway,

@@ -7,7 +7,7 @@ import torch.optim as optim
 import tqdm
 from torch.utils.data import DataLoader, Dataset
 
-from longnet.model import LongNetTransformer, AutoregressiveWrapper
+from long_net.model import LongNetTransformer, AutoregressiveWrapper
 from zeta.optim import StableAdamWUnfused
 
 # constants

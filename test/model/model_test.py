@@ -2,7 +2,7 @@
 import torch
 
 # from model import LongNetTokenizer,
-from longnet.model import LongNetTokenizer, LongNet
+from long_net.model import LongNetTokenizer, LongNet
 
 
 class LongNetTest:
