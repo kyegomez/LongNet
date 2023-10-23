@@ -86,8 +86,6 @@ Here's the updated usage and installation section with two methods: git clone or
 
 # Todo
 
+- [ ] Fix the ParallelTransformer Block's forward pass with dilated attn
+- [ ] Train on enwiki 8 and test
 - [ ] Create multihead iteration
-
-- [ ] Create transformer 
-
-- [ ] train on c4
