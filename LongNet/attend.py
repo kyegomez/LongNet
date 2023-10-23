@@ -11,14 +11,12 @@ from einops import rearrange
 from dataclasses import dataclass
 
 # constants
-
 EfficientAttentionConfig = namedtuple(
     "EfficientAttentionConfig", ["enable_flash", "enable_math", "enable_mem_efficient"]
 )
 
+
 # helpers
-
-
 def exists(val):
     return val is not None
 

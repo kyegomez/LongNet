@@ -16,8 +16,8 @@ class DilatedAttention(nn.Module):
         dropout (float): Dropout rate
         qk_norm (bool): Whether to normalize the QK values
         use_xpos (bool): Whether to use xpos
-        
-    
+
+
     Examples::
 
         >>> import torch
@@ -37,10 +37,11 @@ class DilatedAttention(nn.Module):
         >>> model = DilatedAttention(DIM, SEGMENT_LENGTH, DILATED_RATE)
         >>> # Forward pass
         >>> output = model(Q, K, V)
-        
-    
-    
+
+
+
     """
+
     def __init__(
         self,
         dim,
