@@ -5,11 +5,11 @@ import numpy as np
 import torch
 import torch.optim as optim
 import tqdm
-from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from longnet.model import LongNetTransformer, AutoregressiveWrapper
-from 
+from zeta.optim import StableAdamWUnfused
+
 # constants
 
 NUM_BATCHES = int(1e5)
@@ -75,7 +75,7 @@ val_loader = cycle(DataLoader(val_dataset, batch_size=BATCH_SIZE))
 
 # optimizer
 
-optim = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+optim = StableAdamWUnfused(model.parameters(), lr=LEARNING_RATE)
 
 # training
 
@@ -101,7 +101,7 @@ for i in tqdm.tqdm(range(NUM_BATCHES), mininterval=10.0, desc="training"):
         model.eval()
         inp = random.choice(val_dataset)[:-1]
         prime = decode_tokens(inp)
-        print(f"%s \n\n %s", (prime, "*" * 100))
+        print("%s \n\n %s", (prime, "*" * 100))
 
         sample = model.generate(inp[None, ...], GENERATE_LENGTH)
         output_str = decode_tokens(sample[0])
