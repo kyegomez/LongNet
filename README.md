@@ -56,6 +56,10 @@ print(output)
 
 ```
 
+
+# Train
+- To run a simple training run on the enwiki8 dataset, gitclone, install the requirements.txt, and then run `python3 train.py`
+
 ## LongNet Summarized
 
 Scaling sequence length has become a critical bottleneck in the era of large language models. However, existing methods struggle with either computational complexity or model expressivity, rendering the maximum sequence length restricted. In this paper, they introduce LongNet, a Transformer variant that can scale sequence length to more than 1 billion tokens, without sacrificing the performance on shorter sequences. Specifically, they propose dilated attention, which expands the attentive field exponentially as the distance grows.
