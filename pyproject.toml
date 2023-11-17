@@ -4,12 +4,12 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "longnet"
-version = "0.5.2"
+version = "0.5.3"
 description = "LongNet - Pytorch"
 license = "MIT"
 authors = ["Kye Gomez <kye@apac.ai>"]
 homepage = "https://github.com/kyegomez/LongNet"
-documentation = ""  # Add this if you have documentation.
+documentation = "https://github.com/kyegomez/LongNet"  # Add this if you have documentation.
 readme = "README.md"  # Assuming you have a README.md
 repository = "https://github.com/kyegomez/LongNet"
 keywords = ["artificial intelligence", "deep learning", "optimizers", "Prompt Engineering"]
