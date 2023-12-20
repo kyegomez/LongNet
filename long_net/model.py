@@ -82,7 +82,9 @@ class RotaryEmbedding(nn.Module):
         self.register_buffer("inv_freq", inv_freq)
 
     def forward(self, max_seq_len, *, device):
-        seq = torch.arange(max_seq_len, device=device, dtype=self.inv_freq.dtype)
+        seq = torch.arange(
+            max_seq_len, device=device, dtype=self.inv_freq.dtype
+        )
         freqs = einsum("i , j -> i j", seq, self.inv_freq)
         return torch.cat((freqs, freqs), dim=-1)
 
@@ -130,20 +132,29 @@ class ParallelTransformerBlock(nn.Module):
 
         attn_inner_dim = dim_head * heads
         ff_inner_dim = dim * ff_mult
-        self.fused_dims = (attn_inner_dim, dim_head, dim_head, (ff_inner_dim * 2))
+        self.fused_dims = (
+            attn_inner_dim,
+            dim_head,
+            dim_head,
+            (ff_inner_dim * 2),
+        )
 
         self.heads = heads
         self.scale = dim_head**-0.5
         self.rotary_emb = RotaryEmbedding(dim_head)
 
-        self.fused_attn_ff_proj = nn.Linear(dim, sum(self.fused_dims), bias=False)
+        self.fused_attn_ff_proj = nn.Linear(
+            dim, sum(self.fused_dims), bias=False
+        )
         self.attn_out = nn.Linear(attn_inner_dim, dim, bias=False)
 
         self.attn = DilatedAttention(
             dim, heads, dilation_rates=[1, 2, 4], segment_length=4
         )
 
-        self.ff_out = nn.Sequential(SwiGLU(), nn.Linear(ff_inner_dim, dim, bias=False))
+        self.ff_out = nn.Sequential(
+            SwiGLU(), nn.Linear(ff_inner_dim, dim, bias=False)
+        )
 
         # for caching causal mask and rotary embeddings
 
@@ -282,7 +293,7 @@ class AutoregressiveWrapper(nn.Module):
         eos_token=None,
         temperature=1.0,
         filter_thres=0.9,
-        **kwargs
+        **kwargs,
     ):
         b, t, device = *start_tokens.shape, start_tokens.device
 

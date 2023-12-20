@@ -24,7 +24,8 @@ class LongNetTest:
             self._test_model("language", inputs)
         else:
             raise ValueError(
-                f"Invalid model_type: {model_type}. Please use either 'multimodal' or 'language'."
+                f"Invalid model_type: {model_type}. Please use either"
+                " 'multimodal' or 'language'."
             )
 
     def _test_model(self, model_type: str, inputs: dict):

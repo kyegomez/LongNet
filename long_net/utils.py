@@ -18,7 +18,9 @@ class StableAdamWUnfused(torch.optim.Optimizer):
         custom_scalar=65536,
     ):
         beta1, beta2 = betas[0], betas[1]
-        defaults = dict(lr=lr, weight_decay=weight_decay, beta1=beta1, beta2=beta2)
+        defaults = dict(
+            lr=lr, weight_decay=weight_decay, beta1=beta1, beta2=beta2
+        )
         super(StableAdamWUnfused, self).__init__(params, defaults)
 
         self.eps = eps
@@ -68,8 +70,12 @@ class StableAdamWUnfused(torch.optim.Optimizer):
                     v = param_state["exp_avg"]
                     u = param_state["exp_avg_sq"]
 
-                beta1hat = beta1 * (1 - beta1 ** (step - 1)) / (1 - beta1**step)
-                beta2hat = beta2 * (1 - beta2 ** (step - 1)) / (1 - beta2**step)
+                beta1hat = (
+                    beta1 * (1 - beta1 ** (step - 1)) / (1 - beta1**step)
+                )
+                beta2hat = (
+                    beta2 * (1 - beta2 ** (step - 1)) / (1 - beta2**step)
+                )
 
                 v = v.mul_(beta1hat).add_(g, alpha=1.0 - beta1hat)
                 u = u.mul_(beta2hat).addcmul_(g, g, value=1.0 - beta2hat)
@@ -79,7 +85,8 @@ class StableAdamWUnfused(torch.optim.Optimizer):
                 # StableAdamW = AdamW + update clipping (https://arxiv.org/abs/1804.04235) applied tensor-wise.
                 rms = (
                     torch.div(
-                        g.pow(2), torch.maximum(u, (self.eps**2) * torch.ones_like(u))
+                        g.pow(2),
+                        torch.maximum(u, (self.eps**2) * torch.ones_like(u)),
                     )
                     .mean()
                     .sqrt()
@@ -106,7 +113,9 @@ class RelativePositionBias(nn.Module):
         self.num_buckets = num_buckets
         self.max_distance = max_distance
         self.n_heads = n_heads
-        self.relative_attention_bias = nn.Embedding(self.num_buckets, self.n_heads)
+        self.relative_attention_bias = nn.Embedding(
+            self.num_buckets, self.n_heads
+        )
 
     @staticmethod
     def _relative_position_bucket(
@@ -145,9 +154,13 @@ class RelativePositionBias(nn.Module):
             device=self.relative_attention_bias.weight.device,
         )[:, None]
         memory_position = torch.arange(
-            klen, dtype=torch.long, device=self.relative_attention_bias.weight.device
+            klen,
+            dtype=torch.long,
+            device=self.relative_attention_bias.weight.device,
         )[None, :]
-        relative_position = memory_position - context_position  # shape (qlen, klen)
+        relative_position = (
+            memory_position - context_position
+        )  # shape (qlen, klen)
 
         rp_bucket = self._relative_position_bucket(
             relative_position,  # shape (qlen, klen)
@@ -156,8 +169,12 @@ class RelativePositionBias(nn.Module):
             max_distance=self.max_distance,
         )
         rp_bucket = rp_bucket.to(self.relative_attention_bias.weight.device)
-        values = self.relative_attention_bias(rp_bucket)  # shape (qlen, klen, heads)
-        values = values.permute([2, 0, 1]).unsqueeze(0)  # shape (1, heads, qlen, klen)
+        values = self.relative_attention_bias(
+            rp_bucket
+        )  # shape (qlen, klen, heads)
+        values = values.permute([2, 0, 1]).unsqueeze(
+            0
+        )  # shape (1, heads, qlen, klen)
         return values
 
     def forward(self, batch_size, qlen, klen, step=None):
@@ -182,7 +199,9 @@ def rotate_every_two(x):
     x1 = x[:, :, ::2]
     x2 = x[:, :, 1::2]
     x = torch.stack((-x2, x1), dim=-1)
-    return x.flatten(-2)  # in einsum notation: rearrange(x, '... d j -> ... (d j)')\
+    return x.flatten(
+        -2
+    )  # in einsum notation: rearrange(x, '... d j -> ... (d j)')\
 
 
 def duplicate_interleave(m):
@@ -208,7 +227,8 @@ class XPOS(nn.Module):
         self.head_dim = head_dim
         self.scale_base = scale_base
         self.register_buffer(
-            "scale", (torch.arange(0, head_dim, 2) + 0.4 * head_dim) / (1.4 * head_dim)
+            "scale",
+            (torch.arange(0, head_dim, 2) + 0.4 * head_dim) / (1.4 * head_dim),
         )
 
     def forward(self, x, offset=0, downscale=False):
@@ -242,7 +262,9 @@ def SparsifyIndices(
 
     print(f"x.size 1st: {x.shape} and xdtype: {x.dtype}")
 
-    x_indices = torch.arange(0, n, dtype=torch.long, device=x.device)[None, :, None]
+    x_indices = torch.arange(0, n, dtype=torch.long, device=x.device)[
+        None, :, None
+    ]
     print(f"X indices dtype: {x_indices.shape} and dtype: {x.dtype}")
 
     num_subatt = sum([int(math.ceil(n / w)) for w in ws])
@@ -252,7 +274,8 @@ def SparsifyIndices(
         (b, num_subatt * max_subatt_n, c), device=x.device, dtype=torch.int64
     )
     print(
-        f"Sparse indices shape and dtype: {sparse_indices.shape} and dtype: {sparse_indices.dtype}"
+        f"Sparse indices shape and dtype: {sparse_indices.shape} and dtype:"
+        f" {sparse_indices.dtype}"
     )
 
     subatt_idx = 0
@@ -261,7 +284,8 @@ def SparsifyIndices(
             offset = head_idx % r
             cur_sparse_indices = segment_indices[:, offset::r, :]
             print(
-                f"Current sparse indices shape {cur_sparse_indices.shape} and dtype: {cur_sparse_indices.dtype}"
+                f"Current sparse indices shape {cur_sparse_indices.shape} and"
+                f" dtype: {cur_sparse_indices.dtype}"
             )
             start_idx = subatt_idx * max_subatt_n
             end_idx = start_idx + cur_sparse_indices.shape[1]
@@ -276,7 +300,8 @@ def SparsifyIndices(
 
         # combine batch and subattention dims
         print(
-            f"Padding mask shape: {padding_mask.shape} and dtype: {padding_mask.dtype}"
+            f"Padding mask shape: {padding_mask.shape} and dtype:"
+            f" {padding_mask.dtype}"
         )
         padding_mask = padding_mask.view((-1, max_subatt_n))
     else:
@@ -294,8 +319,13 @@ def MixOutputs(
     a_indices: torch.Tensor,
 ) -> torch.Tensor:
     print(f"Input 'a_os' shape: {a_os.shape} and dtype: {a_os.dtype}")
-    print(f"Input 'a_denoms' shape: {a_denoms.shape} and dtype: {a_denoms.dtype}")
-    print(f"Input 'a_indices' shape: {a_indices.shape} and dtype: {a_indices.dtype}")
+    print(
+        f"Input 'a_denoms' shape: {a_denoms.shape} and dtype: {a_denoms.dtype}"
+    )
+    print(
+        f"Input 'a_indices' shape: {a_indices.shape} and dtype:"
+        f" {a_indices.dtype}"
+    )
 
     # Ensure the source tensor has the same dtype as the target tensor before the scatter operation
     a_denoms = a_denoms.to(out_dtype)
@@ -310,7 +340,8 @@ def MixOutputs(
         att_denom_sums_shape, device=out_device, dtype=out_dtype
     )
     print(
-        f"Initialized 'att_denom_sums' shape: {att_denom_sums.shape} and dtype: {att_denom_sums.dtype}"
+        f"Initialized 'att_denom_sums' shape: {att_denom_sums.shape} and dtype:"
+        f" {att_denom_sums.dtype}"
     )
 
     # Use scatter_add_ without unsqueezing a_denoms
@@ -319,7 +350,8 @@ def MixOutputs(
     # select attention softmax denominator sums for current sparse indices
     sparse_att_denom_sum = torch.gather(att_denom_sums, 1, a_indices[:, :, 0])
     print(
-        f"'sparse_att_denom_sum' shape: {sparse_att_denom_sum.shape} and dtype: {sparse_att_denom_sum.dtype}"
+        f"'sparse_att_denom_sum' shape: {sparse_att_denom_sum.shape} and dtype:"
+        f" {sparse_att_denom_sum.dtype}"
     )
 
     # compute alphas

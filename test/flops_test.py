@@ -52,7 +52,10 @@ for seq_len in sequence_lengths:
 
 # Print benchmark results
 for seq_len, elapsed, tflops in zip(sequence_lengths, time_taken, tflops_per_s):
-    print(f"Sequence length: {seq_len}, Time elapsed: {elapsed} s, TFLOPs/s: {tflops}")
+    print(
+        f"Sequence length: {seq_len}, Time elapsed: {elapsed} s, TFLOPs/s:"
+        f" {tflops}"
+    )
 
 
 # # Plotting

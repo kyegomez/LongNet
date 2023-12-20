@@ -59,7 +59,9 @@ class DilatedAttention(nn.Module):
         self.dtype = dtype
         self.device = device
 
-        self.attention = FlashAttention(causal=self.causal, dropout=dropout).to(device)
+        self.attention = FlashAttention(causal=self.causal, dropout=dropout).to(
+            device
+        )
 
         if use_xpos:
             self.xpos = XPOS(head_dim=dim // heads)
@@ -80,9 +82,11 @@ class DilatedAttention(nn.Module):
 
     def get_mask(self, i, j):
         """i = row, j=column"""
-        return torch.ones((i, j), device=self.device, dtype=torch.bool).triu(j - i + 2)
+        return torch.ones((i, j), device=self.device, dtype=torch.bool).triu(
+            j - i + 2
+        )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         batch_size, seq_len, _ = x.shape
         padding_len = -seq_len % self.segment_size
         x = F.pad(x, (0, 0, 0, padding_len))
@@ -97,7 +101,9 @@ class DilatedAttention(nn.Module):
 
         # qk_norm
         if self.qk_norm:
-            q, k, v = map(self.norm, (self.proj_q(x), self.proj_k(x), self.proj_v(x)))
+            q, k, v = map(
+                self.norm, (self.proj_q(x), self.proj_k(x), self.proj_v(x))
+            )
         else:
             q, k, v = self.proj_q(x), self.proj_k(x), self.proj_v(x)
 

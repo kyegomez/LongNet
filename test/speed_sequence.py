@@ -51,7 +51,10 @@ for seq_len in seq_lengths:
     # Store the time
     times.append(avg_time)
 
-    print(f"Sequence length: {seq_len}, Average forward pass time: {avg_time} seconds")
+    print(
+        f"Sequence length: {seq_len}, Average forward pass time:"
+        f" {avg_time} seconds"
+    )
 
 # Plot the results
 plt.figure(figsize=(10, 6))
