@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from long_net.attend import FlashAttention
+# from long_net.attend import FlashAttention
+from zeta import FlashAttention
 from long_net.utils import XPOS, RelativePositionBias
 
 
