@@ -1,8 +1,8 @@
-[![Multi-Modality](agorabanner.png)](https://discord.gg/qUtxnK2NMf)
+[![Multi-Modality](images/agorabanner.png)](https://discord.gg/qUtxnK2NMf)
 
 
 # LongNet: Scaling Transformers to 1,000,000,000 Tokens
-![LongNetBanner](longnet.jpg)
+![LongNetBanner](images/longnet.jpg)
 
 
 [![GitHub issues](https://img.shields.io/github/issues/kyegomez/LongNet)](https://github.com/kyegomez/LongNet/issues) 
