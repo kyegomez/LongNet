@@ -1,5 +1,5 @@
 import torch
-from long_net.attention import DilatedAttention
+from long_net import DilatedAttention
 
 
 # model config

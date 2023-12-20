@@ -12,7 +12,7 @@ static/generated
 swarms/__pycache__
 venv
 .DS_Store
-
+.ruff_cache
 .DS_STORE
 swarms/agents/.DS_Store
 

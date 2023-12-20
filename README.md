@@ -24,7 +24,7 @@ This is an open source implementation for the paper [LongNet: Scaling Transforme
 ## Installation
 
 ```shell
-pip install LongNet
+pip install longnet
 ```
 
 ## Usage
@@ -33,7 +33,7 @@ Once you have installed LongNet, you can use the `DilatedAttention` class as fol
 
 ```python
 import torch
-from long_net.attention import DilatedAttention
+from long_net import DilatedAttention
 
 
 # model config
@@ -48,11 +48,12 @@ seq_len = 8192
 
 
 # create model and data
-model = DilatedAttention(dim, heads, dilation_rate, segment_size)
+model = DilatedAttention(dim, heads, dilation_rate, segment_size, qk_norm=True)
 x = torch.randn((batch_size, seq_len, dim))
 
 output = model(x)
 print(output)
+
 
 ```
 
