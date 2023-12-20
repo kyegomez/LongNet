@@ -1,6 +1,6 @@
 import unittest
 import torch
-from LongNet import DilatedLongNet
+from long_net import DilatedLongNet
 
 
 class TestDilatedLongNet(unittest.TestCase):

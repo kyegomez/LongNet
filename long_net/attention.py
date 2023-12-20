@@ -34,18 +34,18 @@ class DilatedAttention(nn.Module):
 
     def __init__(
         self,
-        dim,
-        heads,
-        dilation_rate,
-        segment_size,
-        dropout=0.0,
-        causal=False,
-        use_xpos=False,
-        use_rel_pos_bias=False,
-        qk_norm=False,
-        dtype=torch.float16,
-        device="cuda:0",
-    ):
+        dim: int,
+        heads: int,
+        dilation_rate: int,
+        segment_size: int,
+        dropout: float = 0.0,
+        causal: bool = False,
+        use_xpos: bool = False,
+        use_rel_pos_bias: bool = False,
+        qk_norm: bool = False,
+        dtype: torch.dtype = torch.float16,
+        device: str = "cuda:0",
+    ) -> None:
         super(DilatedAttention, self).__init__()
         self.dim = dim
         self.heads = heads
@@ -87,6 +87,14 @@ class DilatedAttention(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass of the DilatedAttention module.
+
+        Args:
+            x (torch.Tensor): The input tensor.
+
+        Returns:
+            torch.Tensor: The output tensor.
+        """
         batch_size, seq_len, _ = x.shape
         padding_len = -seq_len % self.segment_size
         x = F.pad(x, (0, 0, 0, padding_len))
