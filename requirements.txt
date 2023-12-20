@@ -8,4 +8,5 @@ ninja
 packaging
 transformers
 beartype
+zetascale
 pthflops
