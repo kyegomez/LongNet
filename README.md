@@ -57,6 +57,28 @@ print(output)
 
 ```
 
+### `LongNetTransformer`
+A fully ready to train transformer model with dilated transformer blocks with Feedforwards with layernorm, SWIGLU, and a parallel transformer block
+
+```python
+import torch
+from long_net.model import LongNetTransformer
+
+longnet = LongNetTransformer(
+    num_tokens=20000,
+    dim=512,
+    depth=6,
+    dim_head=64,
+    heads=8,
+    ff_mult=4,
+)
+
+tokens = torch.randint(0, 20000, (1, 512))
+logits = longnet(tokens)
+print(logits)
+
+
+```
 
 # Train
 - To run a simple training run on the enwiki8 dataset, gitclone, install the requirements.txt, and then run `python3 train.py`
