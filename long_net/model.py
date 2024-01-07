@@ -204,7 +204,7 @@ class ParallelTransformerBlock(nn.Module):
 
         # attention
 
-        attn = self.attn(q, k, v)
+        attn = self.attn(x)
 
         # # aggregate values
 
