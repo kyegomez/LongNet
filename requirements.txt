@@ -3,10 +3,7 @@ einops
 accelerate
 bitsandbytes
 fairscale
-timm
-ninja
 packaging
 transformers
 beartype
 zetascale
-pthflops

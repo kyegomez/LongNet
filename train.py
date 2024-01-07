@@ -8,10 +8,10 @@ import tqdm
 from torch.utils.data import DataLoader, Dataset
 
 from long_net.model import LongNetTransformer, AutoregressiveWrapper
-from zeta.optim import StableAdamWUnfused
+from long_net.utils import StableAdamWUnfused
+
 
 # constants
-
 NUM_BATCHES = int(1e5)
 BATCH_SIZE = 4
 GRADIENT_ACCUMULATE_EVERY = 4
@@ -21,9 +21,8 @@ GENERATE_EVERY = 500
 GENERATE_LENGTH = 512
 SEQ_LEN = 8196
 
+
 # helpers
-
-
 def cycle(loader):
     while True:
         for data in loader:
@@ -39,7 +38,6 @@ def decode_tokens(tokens):
 
 
 # instantiate GPT-like decoder model
-
 model = LongNetTransformer(num_tokens=256, dim=512, depth=8)
 
 model = AutoregressiveWrapper(model, max_seq_len=SEQ_LEN)

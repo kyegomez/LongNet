@@ -126,7 +126,17 @@ def FeedForward(dim, hidden_dim, dropout=0.0):
 
 
 class ParallelTransformerBlock(nn.Module):
-    def __init__(self, dim, dim_head=64, heads=8, ff_mult=4):
+    def __init__(
+        self,
+        dim,
+        dim_head=64,
+        dilation_rate: int = 2,
+        segment_size: int = 64,
+        heads=8,
+        ff_mult=4,
+        *args,
+        **kwargs,
+    ):
         super().__init__()
         self.norm = LayerNorm(dim)
 
@@ -149,7 +159,13 @@ class ParallelTransformerBlock(nn.Module):
         self.attn_out = nn.Linear(attn_inner_dim, dim, bias=False)
 
         self.attn = DilatedAttention(
-            dim, heads, dilation_rates=[1, 2, 4], segment_length=4
+            dim,
+            heads,
+            dilation_rate,
+            segment_size,
+            qk_norm=True,
+            *args,
+            **kwargs,
         )
 
         self.ff_out = nn.Sequential(
@@ -225,6 +241,8 @@ class Transformer(nn.Module):
         heads,
         dim_head,
         ff_mult=4,
+        dilation_rate: int = 2,
+        segment_size: int = 64,
     ):
         super().__init__()
         self.layers = nn.ModuleList([])
@@ -235,7 +253,14 @@ class Transformer(nn.Module):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        ParallelTransformerBlock(dim, dim_head, heads, ff_mult),
+                        ParallelTransformerBlock(
+                            dim,
+                            dim_head,
+                            dilation_rate,
+                            segment_size,
+                            heads,
+                            ff_mult,
+                        ),
                         FeedForward(dim, dim, dropout=0.1),
                     ]
                 )
@@ -260,11 +285,15 @@ class LongNetTransformer(nn.Module):
         dim_head=64,
         heads=8,
         ff_mult=4,
+        dilation_rate: int = 2,
+        segment_size: int = 64,
     ):
         super().__init__()
         self.emb = nn.Embedding(num_tokens, dim)
 
-        self.transformer = Transformer(dim, depth, heads, dim_head, ff_mult)
+        self.transformer = Transformer(
+            dim, depth, heads, dim_head, ff_mult, dilation_rate, segment_size
+        )
 
         self.to_logits = nn.Sequential(RMSNorm(dim), nn.Linear(dim, num_tokens))
 
